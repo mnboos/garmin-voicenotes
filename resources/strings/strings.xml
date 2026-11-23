@@ -1,0 +1,6 @@
+<strings>
+    <string id="Voicenotes">Voicenotes</string>
+    <string id="ServerLabel">Server URL (HTTPS)</string>
+    <string id="TokenLabel">Server access token</string>
+    <string id="AutoLabel">Automatically upload queued notes (also in background)</string>
+</strings>

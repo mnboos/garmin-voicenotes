@@ -1,0 +1,28 @@
+project.manifest = manifest.xml
+base.sourcePath = source
+base.resourcePath = resources
+
+ # Launcher icon sizes from the Garmin device profiles.
+fr170.resourcePath = $(base.resourcePath);launcher-icons/54
+fr170m.resourcePath = $(base.resourcePath);launcher-icons/54
+fr57042mm.resourcePath = $(base.resourcePath);launcher-icons/54
+fr70.resourcePath = $(base.resourcePath);launcher-icons/54
+venu441mm.resourcePath = $(base.resourcePath);launcher-icons/54
+vivoactive6.resourcePath = $(base.resourcePath);launcher-icons/54
+fenix843mm.resourcePath = $(base.resourcePath);launcher-icons/60
+fenix943mm.resourcePath = $(base.resourcePath);launcher-icons/60
+fenix9pro43mm.resourcePath = $(base.resourcePath);launcher-icons/60
+fenixe.resourcePath = $(base.resourcePath);launcher-icons/60
+approachs7243mm.resourcePath = $(base.resourcePath);launcher-icons/60
+d2mach2pro.resourcePath = $(base.resourcePath);launcher-icons/65
+fenix847mm.resourcePath = $(base.resourcePath);launcher-icons/65
+fenix8pro47mm.resourcePath = $(base.resourcePath);launcher-icons/65
+fenix947mm.resourcePath = $(base.resourcePath);launcher-icons/65
+fenix9pro47mm.resourcePath = $(base.resourcePath);launcher-icons/65
+fenix9pro51mm.resourcePath = $(base.resourcePath);launcher-icons/65
+fr57047mm.resourcePath = $(base.resourcePath);launcher-icons/65
+fr970.resourcePath = $(base.resourcePath);launcher-icons/65
+venu445mm.resourcePath = $(base.resourcePath);launcher-icons/65;resources-venu445mm
+venux1.resourcePath = $(base.resourcePath);launcher-icons/65
+approachs7247mm.resourcePath = $(base.resourcePath);launcher-icons/65
+marq3.resourcePath = $(base.resourcePath);launcher-icons/65

@@ -1,0 +1,4 @@
+<resources>
+    <!-- Garmin simulator Enter key center, relative to the display origin. -->
+    <jsonData id="StartButton">[495, 67.5]</jsonData>
+</resources>

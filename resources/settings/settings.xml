@@ -1,0 +1,5 @@
+<settings>
+    <setting propertyKey="@Properties.serverUrl" title="@Strings.ServerLabel"><settingConfig type="alphaNumeric"/></setting>
+    <setting propertyKey="@Properties.serverToken" title="@Strings.TokenLabel"><settingConfig type="alphaNumeric"/></setting>
+    <setting propertyKey="@Properties.autoUpload" title="@Strings.AutoLabel"><settingConfig type="boolean"/></setting>
+</settings>

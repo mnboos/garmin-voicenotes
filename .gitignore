@@ -1,0 +1,12 @@
+.tools/
+private/
+.env
+bin/
+data/
+__pycache__/
+*.pyc
+*.der
+*.prg
+*.iq
+*.debug.xml
+sdk-page.html
