@@ -1,0 +1,28 @@
+---
+title: Voicenotes documentation
+toc: false
+---
+
+Voicenotes records microphone audio on supported Garmin watches. Play recordings on the watch, export them to an HTTPS receiver, or send them to the Android companion beta on a supported fēnix 8.
+
+## Tutorials
+
+- [Send your first simulated voice note](android-demo.qmd)
+
+## How-to guides
+
+- [Build the watch app and run the export receiver](setup.qmd)
+- [Install and use the Android beta](android-beta.qmd)
+- [Get notified in Home Assistant when a voice note is saved](how-to/home-assistant-notifications.qmd)
+- [Run the Garmin-to-Android simulator tests](run-simulator-tests.qmd)
+
+## Reference
+
+- [Compatibility and limits](compatibility.qmd)
+- [Simulator test reference](simulator-test-reference.qmd)
+- [Verification results](validation.qmd)
+
+## Explanation
+
+- [How Voicenotes connects to Home Assistant](explanation/home-assistant-integration.qmd)
+- [What the simulator confirms about sync](simulator-sync-behavior.qmd)

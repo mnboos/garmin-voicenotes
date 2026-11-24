@@ -1,4 +1,6 @@
-# Verification — 23 November 2026
+---
+title: "Verification — 23 November 2026"
+---
 
 Passed:
 

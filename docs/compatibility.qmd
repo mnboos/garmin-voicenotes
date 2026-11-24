@@ -1,4 +1,6 @@
-# Compatibility and limits
+---
+title: "Compatibility and limits"
+---
 
 Checked against Garmin's documentation on 23 November 2026.
 
@@ -15,7 +17,7 @@ The release manifest includes 29 Garmin product IDs. The D2 Mach 2 is excluded b
 - The app only captures in the foreground. The background service only uploads saved recordings.
 - Automatic deferred uploads run while the app is open, retrying with a delay of 30 seconds up to five minutes. After closing the app, a background job requests five-minute intervals. Garmin controls actual scheduling and can terminate jobs to free memory.
 - Background jobs save a progress marker after each acknowledged chunk, work on one note per invocation, and stop starting requests after 20 seconds to respect Garmin's 30-second job limit. An interrupted request is safely repeated later.
-- Networking uses Garmin's normal web-request transport. There is no explicit LTE-session activation or custom phone companion in this version; Wi-Fi/LTE availability must be verified per device.
+- Direct server export uses Garmin's normal web-request transport. Verify Wi-Fi and LTE availability per device.
 - Uploads are serial. Recording and playback wait for an active upload to finish. Notes are never automatically deleted.
 - The receiver is for one owner. It limits each note to 80 KB and total stored files to approximately 1 GB. It retains uploaded chunks to support safe retries; monitor disk use and archive complete note folders as needed.
 

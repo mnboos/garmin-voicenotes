@@ -1,0 +1,11 @@
+---
+title: "What the simulator confirms about sync"
+---
+
+The watch stores notes before sending audio. Android pulls one note at a time, saves incomplete transfers as partial files, and uses the file length to resume. The watch marks a note **On phone** after Android commits the complete file and sends a receipt. The watch keeps a local copy.
+
+The reconnect test closes the Android side of the tether midway through the transfer. Keeping Garmin’s simulator socket open lets the test isolate recovery in the inbox and repeat the interruption at a known checkpoint.
+
+The background check answers a separate question. On Connect IQ SDK 9.3.0, the tether can connect when the simulated watch app is exited even when the app receives no requests. In that case the note stays queued and is offered when the watch app reopens. The default suite records this result and requires recovery. The strict recipe also requires background delivery.
+
+Verify Bluetooth pairing, microphone capture, and locked-phone behavior on physical hardware before release.

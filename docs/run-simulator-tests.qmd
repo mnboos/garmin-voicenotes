@@ -1,0 +1,33 @@
+---
+title: "Run the Garmin-to-Android simulator tests"
+---
+
+1. Boot the Android virtual phone with `just android-emulator` in a separate terminal. Wait until Android has finished booting.
+2. Open the Garmin simulator with `just garmin-simulator`. If its tether is active, choose **adb Connection → Release**.
+3. Stop the local Voicenotes receiver. Run `just test-simulator` from the repository root.
+4. When prompted, choose **adb Connection → Start** in Garmin. The runner queues the fixtures, verifies automatic playback, interrupts the Android side of the tether, restarts the test inbox, checks the resumed file, and tests what happens when the watch app exits. Choose **Start** again when prompted after the watch app reopens.
+5. Check the three results in the terminal. The runner prints the directory containing the watch and Android logs and the delivered WAVs.
+
+If more than one Android emulator is running, use `just test-simulator emulator-5554` with the serial from `adb devices`. The Mac can cover the simulator window while the suite runs. Bring it forward when a menu action is requested.
+
+If you need background delivery to pass, run `just test-simulator-background`. This variant fails if Android cannot pull the queued note while the watch app is exited. It still checks recovery after reopening the watch app.
+
+If the suite times out waiting for the tether, check that you chose **Start** after the prompt. If Garmin shows an active connection while the runner is still waiting, choose **Release**, then **Start**.
+
+If the launcher stalls on the Garmin logo after the background check, quit and reopen the simulator while the suite retries. The fixture keeps its queued recording in persistent storage.
+
+See the [test reference](simulator-test-reference.qmd) for expected results and [why the background check is separate](simulator-sync-behavior.qmd).
+
+## Watch recovery and upload regressions
+
+With a developer key configured and the Connect IQ simulator running, run:
+
+```sh
+bash tests/watch/build.sh
+"$(bash build.sh --sdk)/bin/monkeydo" bin/watch-tests/Regression.prg venu445mm -t
+```
+
+The tests use a separate simulator app ID and exercise interrupted storage writes,
+partial recording status, and foreground and background scheduling. The queue
+tests supply receiver acknowledgements locally. Check the simulator's printed
+pass/fail summary because some SDK versions return exit code 1 on success.

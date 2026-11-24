@@ -1,0 +1,5 @@
+*
+!_quarto.yml
+!*.qmd
+!how-to/*.qmd
+!explanation/*.qmd

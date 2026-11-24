@@ -1,4 +1,6 @@
-# Build and run Voicenotes
+---
+title: "Build and run Voicenotes"
+---
 
 ## Build the watch app
 
@@ -52,7 +54,7 @@ Private settings are written into a separate resource copy under `private/`. Pub
 
 Direct equivalents: `build.ps1 -SettingsFile private/settings.json -Device fr970` or `bash build.sh --device fr970 private/settings.json`.
 
-On Windows, run `just garmin-check` after the first build to check the installed device profiles. Use `just garmin-package` to export the release package. See [verification results](validation.md).
+On Windows, run `just garmin-check` after the first build to check the installed device profiles. Use `just garmin-package` to export the release package. See [verification results](validation.qmd).
 
 ## Run the export receiver
 
@@ -78,6 +80,8 @@ The receiver uses Python 3.11 or newer and only the standard library. It support
 7. Find the original audio in `data/NOTE_ID/note.ogg` or `note.wav`. `metadata.json` contains the checksum and recording status. Back up this directory.
 
 The receiver preserves source bytes without transcoding. It validates the container signature, byte count, and complete chunk set; it does not prove the recording contains audible speech.
+
+To run an automation after a note is saved, see [Get notified in Home Assistant](how-to/home-assistant-notifications.qmd).
 
 ## Verify changes
 
