@@ -1,5 +1,6 @@
 .tools/
 private/
+/android/
 .env
 bin/
 data/
@@ -10,3 +11,5 @@ __pycache__/
 *.iq
 *.debug.xml
 sdk-page.html
+/docs/.quarto/
+/docs/_site/

@@ -1,21 +1,21 @@
 import Toybox.Application;
-import Toybox.Audio;
 import Toybox.Lang;
 import Toybox.Math;
-import Toybox.System;
 import Toybox.Time;
 
-// Each chunk is below Storage's 32 KB value limit. The catalogue is small.
-// Persist the chunk before the catalogue so a failed write never references missing audio.
 class Notes {
     var items as Lang.Array<Lang.Dictionary>;
     const LIMIT = 80000;
     function initialize() {
         var stored = Application.Storage.getValue("notes");
         items = stored == null ? [] : stored as Lang.Array<Lang.Dictionary>;
-        for (var i = 0; i < items.size(); i++) {
+        for (var i = items.size()-1; i >= 0; i--) {
             var item = items[i] as Lang.Dictionary;
-            if (item["state"] == "recording") {
+            if ("deleting".equals(item["state"])) {
+                finishRemoval(item);
+            } else if ("recording".equals(item["state"]) || "interrupted".equals(item["state"])) {
+                // Discard the window that never committed to the catalog.
+                Application.Storage.deleteValue(item["id"] + ":" + item["chunks"]);
                 item["state"] = "interrupted";
             }
         }
@@ -53,11 +53,15 @@ class Notes {
             "extension"=>extension, "format"=>[format[:containerFormat], format[:codec],
                 format[:frequency], format[:channels]]};
         items.add(note);
-        save();
+        try { save(); } catch (e) {
+            items.remove(note);
+            throw e;
+        }
         return note;
     }
     function append(note as Lang.Dictionary, data as Lang.ByteArray) {
         if (used() + data.size() > LIMIT) { return false; }
+        // Write audio before publishing it in the catalogue.
         var key = note["id"] + ":" + note["chunks"];
         Application.Storage.setValue(key, data);
         note["chunks"] += 1;
@@ -78,13 +82,23 @@ class Notes {
         return {:containerFormat=>f[0], :codec=>f[1], :frequency=>f[2], :channels=>f[3]};
     }
     function remove(note as Lang.Dictionary) {
-        // Remove chunks first; deletion is explicit and confirmed in the UI.
+        var previous = note["state"];
+        note["state"] = "deleting";
+        try { save(); } catch (e) {
+            note["state"] = previous;
+            throw e;
+        }
+        finishRemoval(note);
+    }
+    function finishRemoval(note as Lang.Dictionary) {
         for (var i = 0; i < note["chunks"]; i++) {
             Application.Storage.deleteValue(note["id"] + ":" + i);
         }
-        items.remove(note);
-        save();
+        Application.Storage.deleteValue("phone:" + note["id"]);
         Application.Storage.deleteValue("sent:" + note["id"]);
         Application.Storage.deleteValue("upload:" + note["id"]);
+        Application.Storage.deleteValue("retry:" + note["id"]);
+        items.remove(note);
+        save();
     }
 }

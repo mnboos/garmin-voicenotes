@@ -16,7 +16,7 @@ LOG = logging.getLogger("voicenotes")
 MAX_NOTE_BYTES = 80_000
 MAX_CHUNKS = 128
 MAX_DISK_BYTES = 1_000_000_000
-NOTE_PATH = re.compile(r"/api/notes/([a-zA-Z0-9-]{1,100})/(chunks/(\d+)|complete)\Z")
+NOTE_PATH = re.compile(r"/api/notes/([a-zA-Z0-9-]{1,100})/(?:chunks/(\d+)|complete)")
 
 
 class UploadError(Exception):
@@ -39,6 +39,11 @@ class Repository:
             os.fsync(stream.fileno())
         temp.replace(path)
 
+    def check_capacity(self, additional_bytes: int):
+        used = sum(path.stat().st_size for path in self.root.rglob("*") if path.is_file())
+        if used + additional_bytes > MAX_DISK_BYTES:
+            raise UploadError(507, "Receiver storage full")
+
     def put_chunk(self, note_id: str, index: int, content: bytes):
         if not 0 <= index < MAX_CHUNKS or not 0 < len(content) <= 4096:
             raise UploadError(400, "Invalid chunk")
@@ -54,15 +59,27 @@ class Repository:
                 raise UploadError(409, "Note already complete")
             if sum(p.stat().st_size for p in folder.glob("*.chunk")) + len(content) > MAX_NOTE_BYTES:
                 raise UploadError(413, "Note too large")
-            if sum(p.stat().st_size for p in self.root.rglob("*") if p.is_file()) + len(content) > MAX_DISK_BYTES:
-                raise UploadError(507, "Receiver storage full")
+            self.check_capacity(len(content))
             self.atomic_write(target, content)
 
     def complete(self, note_id: str, meta: dict):
-        count, size, extension = meta.get("chunks"), meta.get("bytes"), meta.get("extension")
-        if (meta.get("id") != note_id or type(count) is not int or not 1 <= count <= MAX_CHUNKS
-                or type(size) is not int or not 0 < size <= MAX_NOTE_BYTES or extension not in ("ogg", "wav")):
+        count = meta.get("chunks")
+        size = meta.get("bytes")
+        extension = meta.get("extension")
+        if (
+            meta.get("id") != note_id
+            or type(count) is not int or not 1 <= count <= MAX_CHUNKS
+            or type(size) is not int or not 0 < size <= MAX_NOTE_BYTES
+            or extension not in ("ogg", "wav")
+        ):
             raise UploadError(400, "Invalid note metadata")
+        location = meta.get("location")
+        if location is not None and (
+            not isinstance(location, list) or len(location) != 2
+            or any(type(value) not in (int, float) or not -limit <= value <= limit
+                   for value, limit in zip(location, (90, 180)))
+        ):
+            raise UploadError(400, "Invalid note location")
         with self.lock:
             folder = self.root / note_id
             chunks = [folder / f"{index:04d}.chunk" for index in range(count)]
@@ -71,7 +88,11 @@ class Repository:
             audio = b"".join(chunk.read_bytes() for chunk in chunks)
             if len(audio) != size or len(list(folder.glob("*.chunk"))) != count:
                 raise UploadError(409, "Size or chunk count mismatch")
-            if not (audio.startswith(b"OggS") if extension == "ogg" else audio.startswith(b"RIFF") and audio[8:12] == b"WAVE"):
+            if extension == "ogg":
+                valid_header = audio.startswith(b"OggS")
+            else:
+                valid_header = audio.startswith(b"RIFF") and audio[8:12] == b"WAVE"
+            if not valid_header:
                 raise UploadError(422, "Audio container header missing")
             digest = hashlib.sha256(audio).hexdigest()
             metadata_path = folder / "metadata.json"
@@ -80,11 +101,17 @@ class Repository:
                 if existing["sha256"] != digest or existing["extension"] != extension:
                     raise UploadError(409, "Finalized note differs")
                 return
-            # Preserve exactly what the watch sent; never transcode the source recording.
-            self.atomic_write(folder / f"note.{extension}", audio)
             saved = {key: meta.get(key) for key in ("id", "created", "seconds", "state", "chunks", "bytes", "extension", "format")}
+            if location is not None:
+                saved["location"] = location
             saved["sha256"] = digest
-            self.atomic_write(metadata_path, json.dumps(saved, indent=2).encode())
+            metadata = json.dumps(saved, indent=2).encode()
+            audio_path = folder / f"note.{extension}"
+            # An interrupted finalization may already have written the audio.
+            previous_size = audio_path.stat().st_size if audio_path.exists() else 0
+            self.check_capacity(len(metadata) + max(0, len(audio) - previous_size))
+            self.atomic_write(audio_path, audio)
+            self.atomic_write(metadata_path, metadata)
             LOG.info("Note saved: %s, %d bytes", note_id, size)
 
 
@@ -123,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
             match = NOTE_PATH.fullmatch(self.path)
             if not match:
                 raise UploadError(404, "Unknown endpoint")
-            note_id, action, chunk_index = match.groups()
+            note_id, chunk_index = match.groups()
             if (self.command == "PUT") != (chunk_index is not None):
                 raise UploadError(405, "Wrong method")
             length = int(self.headers.get("Content-Length", "0"))
@@ -142,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, {"ok": True})
         except UploadError as error:
             self.respond(error.status, {"ok": False, "error": str(error)})
-        except (ValueError, UnicodeError):
+        except ValueError:
             self.respond(400, {"ok": False, "error": "Invalid request"})
         except OSError:
             LOG.exception("Receiver I/O failure")
@@ -162,14 +189,12 @@ def main():
     if len(token) < 32 or not token.isascii():
         parser.error("Set VOICENOTES_TOKEN to a random ASCII token of at least 32 characters")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    server = Receiver((args.host, args.port), args.data, token)
-    LOG.info("Voicenotes receiver listening on %s:%d", args.host, args.port)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+    with Receiver((args.host, args.port), args.data, token) as server:
+        LOG.info("Voicenotes receiver listening on %s:%d", args.host, args.port)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":

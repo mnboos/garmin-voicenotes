@@ -9,12 +9,16 @@ SETTINGS=""
 PACKAGE=""
 RUN=""
 PRINT_SDK=""
+SIMULATOR=""
+COMPANION=""
 DEVICE=venu445mm
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --device) [ "$#" -ge 2 ] || fail '--device needs a product ID.'; DEVICE=$2; shift ;;
         --package) PACKAGE=1 ;;
         --run) RUN=1 ;;
+        --simulator) SIMULATOR=1 ;;
+        --companion) COMPANION=1 ;;
         --sdk) PRINT_SDK=1 ;;
         -*) fail "Unknown option: $1" ;;
         *)
@@ -27,6 +31,9 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 [ -z "$PACKAGE" ] || { [ -z "$SETTINGS" ] && [ -z "$RUN" ]; } || fail 'Do not combine --package with personal settings or --run.'
+[ -z "$COMPANION" ] || [ -z "$PACKAGE" ] || fail 'Do not combine --companion with --package; the store package never includes the Android companion.'
+[ -z "$SIMULATOR" ] || { [ -z "$PACKAGE" ] && [ -z "$SETTINGS" ]; } ||
+    fail 'Do not combine --simulator with --package or personal settings.'
 if [ "$(uname)" = Darwin ]; then SDK_CFG="$HOME/Library/Application Support/Garmin/ConnectIQ/current-sdk.cfg"
 else SDK_CFG="$HOME/.Garmin/ConnectIQ/current-sdk.cfg"
 fi
@@ -71,10 +78,14 @@ if [ ! -f "$KEY" ]; then
     (umask 077; openssl genrsa 4096 2>/dev/null | openssl pkcs8 -topk8 -inform PEM -outform DER -nocrypt -out "$KEY")
 fi
 JUNGLE="$HERE/monkey.jungle"
+if [ -n "$SETTINGS$SIMULATOR$COMPANION" ]; then
+    BUILD_DIR=$(mktemp -d "$HERE/private/build.XXXXXXXX")
+    trap 'rm -rf -- "$BUILD_DIR"' EXIT
+fi
 if [ -n "$SETTINGS" ]; then
-    mkdir -p "$HERE/private/resources"
-    cp -R "$HERE/resources/." "$HERE/private/resources/"
-    python3 -I - "$SETTINGS" "$HERE/private/resources/settings/properties.xml" <<'PY'
+    mkdir -p "$BUILD_DIR/resources"
+    cp -R "$HERE/resources/." "$BUILD_DIR/resources/"
+    python3 -I - "$SETTINGS" "$BUILD_DIR/resources/settings/properties.xml" <<'PY'
 import json
 from pathlib import Path
 import sys
@@ -89,13 +100,24 @@ for prop in tree.getroot():
         prop.text = values[prop.get('id')]
 tree.write(sys.argv[2], encoding='utf-8')
 PY
-    JUNGLE="$HERE/private/Voicenotes-personal.jungle"
-    cat > "$JUNGLE" <<EOF
-base.resourcePath = $HERE/private/resources
+    cat > "$BUILD_DIR/personal.jungle" <<EOF
+base.resourcePath = $BUILD_DIR/resources
 EOF
-    JUNGLE="$HERE/monkey.jungle;$JUNGLE"
+    JUNGLE="$JUNGLE;$BUILD_DIR/personal.jungle"
 fi
 ARTIFACT="$HERE/bin/Voicenotes.prg"
+if [ -n "$SIMULATOR" ]; then
+    ARTIFACT="$HERE/bin/Voicenotes-simulator.prg"
+    JUNGLE="$JUNGLE;$HERE/simulator/fixture.jungle"
+fi
+if [ -n "$SIMULATOR$COMPANION" ]; then
+    # Override the public exclusions only for explicitly enabled features.
+    EXCLUDE=simulatorTest
+    [ -n "$COMPANION" ] || EXCLUDE="companion;$EXCLUDE"
+    [ -n "$SIMULATOR" ] || EXCLUDE="simulatorFixture;$EXCLUDE"
+    printf 'base.excludeAnnotations = %s\n' "$EXCLUDE" > "$BUILD_DIR/features.jungle"
+    JUNGLE="$JUNGLE;$BUILD_DIR/features.jungle"
+fi
 if [ -n "$PACKAGE" ]; then
     ARTIFACT="$HERE/bin/Voicenotes.iq"
     "$SDK/bin/monkeyc" -f "$JUNGLE" -o "$ARTIFACT" -y "$KEY" -w -r -e

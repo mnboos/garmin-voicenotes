@@ -61,3 +61,66 @@ garmin-simulator:
 [windows]
 garmin-check:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File verify-devices.ps1
+
+[doc("Build and run the watch demo with the sample WAV fixture.")]
+[group('garmin')]
+[private]
+[unix]
+garmin-run-fixture:
+    bash build.sh --simulator --companion --run
+
+[doc("Build bin/Voicenotes.prg with the unreleased Android companion sync enabled.")]
+[group('garmin')]
+[private]
+[unix]
+garmin-build-companion settings="" device="venu445mm":
+    bash build.sh --companion --device {{ quote(device) }} {{ quote(settings) }}
+
+[doc("Build the Android debug inbox APK.")]
+[group('android')]
+[private]
+[unix]
+android-build:
+    VOICENOTES_ANDROID_OUTPUT_DIR="$PWD/bin/android" just --justfile "${VOICENOTES_COMPANION_DIR:-$HOME/src/garmin-voicenotes-companion}/.justfile" android-build
+
+[doc("Build a signed APK for the physical Android companion.")]
+[group('android')]
+[private]
+[unix]
+android-beta:
+    VOICENOTES_ANDROID_OUTPUT_DIR="$PWD/bin/android" just --justfile "${VOICENOTES_COMPANION_DIR:-$HOME/src/garmin-voicenotes-companion}/.justfile" android-beta
+
+[doc("Install and open the beta or tethered demo on a running emulator.")]
+[group('android')]
+[private]
+[unix]
+android-preview mode="beta" serial="":
+    VOICENOTES_ANDROID_OUTPUT_DIR="$PWD/bin/android" just --justfile "${VOICENOTES_COMPANION_DIR:-$HOME/src/garmin-voicenotes-companion}/.justfile" android-preview {{ quote(mode) }} {{ quote(serial) }}
+
+[doc("Verify Android inbox storage, interrupted writes, and receipt retries.")]
+[group('test')]
+[private]
+[unix]
+test-android-storage:
+    just --justfile "${VOICENOTES_COMPANION_DIR:-$HOME/src/garmin-voicenotes-companion}/.justfile" test-android-storage
+
+[doc("Run the server-off Venu 4 to Android emulator acceptance suite on macOS.")]
+[group('test')]
+[private]
+[macos]
+test-simulator serial="":
+    python3 tests/simulator/run.py {{ if serial == "" { "" } else { "--serial " + quote(serial) } }}
+
+[doc("Run the simulator suite and require delivery while the watch app is exited.")]
+[group('test')]
+[private]
+[macos]
+test-simulator-background serial="":
+    python3 tests/simulator/run.py --require-background {{ if serial == "" { "" } else { "--serial " + quote(serial) } }}
+
+[doc("Boot the Android virtual phone. Run in a separate terminal.")]
+[group('android')]
+[private]
+[macos]
+android-emulator avd="Medium_Phone_API_37.0":
+    "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}/emulator/emulator" -avd {{ quote(avd) }}

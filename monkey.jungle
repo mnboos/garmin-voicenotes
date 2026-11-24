@@ -1,5 +1,6 @@
 project.manifest = manifest.xml
-base.sourcePath = source
+base.sourcePath = src
+base.excludeAnnotations = companion;simulatorFixture;simulatorTest
 base.resourcePath = resources
 
  # Launcher icon sizes from the Garmin device profiles.

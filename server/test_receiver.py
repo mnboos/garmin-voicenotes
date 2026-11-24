@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from receiver import Receiver, Repository
 
@@ -51,6 +52,17 @@ class ReceiverTests(unittest.TestCase):
         self.assertEqual((self.root / "watch-123/note.wav").read_bytes(), self.audio)
         meta = json.loads((self.root / "watch-123/metadata.json").read_text())
         self.assertEqual(meta["sha256"], hashlib.sha256(self.audio).hexdigest())
+        self.assertNotIn("location", meta)
+
+    def test_saves_optional_location_with_note(self):
+        self.put(0, self.audio[:20])
+        self.put(1, self.audio[20:])
+        self.assertEqual(self.finish(location=[91, 8.55]), 400)
+        location = [47.37, 8.55]
+        self.assertEqual(self.finish(location=location), 200)
+        self.assertEqual(self.finish(location=location), 200)
+        meta = json.loads((self.root / "watch-123/metadata.json").read_text())
+        self.assertEqual(meta["location"], location)
 
     def test_rejects_conflicting_retry(self):
         self.assertEqual(self.put(0, self.audio), 200)
@@ -80,6 +92,16 @@ class ReceiverTests(unittest.TestCase):
         self.assertEqual(self.finish(bytes=12), 422)
         self.assertEqual(self.finish(bytes=999), 409)
         self.assertFalse((self.root / "watch-123/metadata.json").exists())
+
+    def test_finalization_respects_disk_quota_and_can_retry(self):
+        self.assertEqual(self.put(0, self.audio[:20]), 200)
+        self.assertEqual(self.put(1, self.audio[20:]), 200)
+        with patch("receiver.MAX_DISK_BYTES", 2 * len(self.audio)):
+            self.assertEqual(self.finish(), 507)
+        folder = self.root / "watch-123"
+        self.assertFalse((folder / "note.wav").exists())
+        self.assertFalse((folder / "metadata.json").exists())
+        self.assertEqual(self.finish(), 200)
 
 
 if __name__ == "__main__":
