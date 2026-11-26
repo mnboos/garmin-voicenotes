@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  receiver:
+    name: Receiver tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m unittest discover -s server -v
+
+  build:
+    name: Compile watch app
+    runs-on: ubuntu-latest
+    env:
+      # Image used by blackshadev/garmin-connectiq-build-action 9.3.0: Connect IQ SDK 9.3.0
+      # with device profiles. Pinned by digest; update deliberately.
+      CONNECTIQ_IMAGE: ghcr.io/blackshadev/garmin-connectiq-tools@sha256:5188a3bf7cf6511cb82c025666a4025edd0ec12218425a29e18d50c7594ca865
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # Verification only: build.sh signs with a throwaway key and the package is discarded.
+      - name: Compile all manifest devices
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -e CONNECTIQ_SDK=/connectiq \
+            --entrypoint /bin/sh "$CONNECTIQ_IMAGE" \
+            -c 'apk add --no-cache -q bash python3 openssl && bash build.sh --package'

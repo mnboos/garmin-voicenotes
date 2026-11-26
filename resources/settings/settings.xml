@@ -2,4 +2,19 @@
     <setting propertyKey="@Properties.serverUrl" title="@Strings.ServerLabel"><settingConfig type="alphaNumeric"/></setting>
     <setting propertyKey="@Properties.serverToken" title="@Strings.TokenLabel"><settingConfig type="alphaNumeric"/></setting>
     <setting propertyKey="@Properties.autoUpload" title="@Strings.AutoLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.autoRecord" title="@Strings.AutoRecordLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.vibrateOnRecord" title="@Strings.VibrateLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.maxSeconds" title="@Strings.MaxLengthLabel">
+        <settingConfig type="list">
+            <listEntry value="10">@Strings.Len10s</listEntry>
+            <listEntry value="30">@Strings.Len30s</listEntry>
+            <listEntry value="60">@Strings.Len1m</listEntry>
+            <listEntry value="120">@Strings.Len2m</listEntry>
+            <listEntry value="300">@Strings.Len5m</listEntry>
+            <listEntry value="600">@Strings.Len10m</listEntry>
+            <listEntry value="1800">@Strings.Len30m</listEntry>
+            <listEntry value="0">@Strings.LenNone</listEntry>
+        </settingConfig>
+    </setting>
+    <setting propertyKey="@Properties.warnBeforeEnd" title="@Strings.WarnLabel"><settingConfig type="boolean"/></setting>
 </settings>

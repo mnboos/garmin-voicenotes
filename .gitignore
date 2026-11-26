@@ -10,3 +10,4 @@ __pycache__/
 *.iq
 *.debug.xml
 sdk-page.html
+node_modules/

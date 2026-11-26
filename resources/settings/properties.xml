@@ -2,4 +2,8 @@
     <property id="serverUrl" type="string"></property>
     <property id="serverToken" type="string"></property>
     <property id="autoUpload" type="boolean">false</property>
+    <property id="autoRecord" type="boolean">false</property>
+    <property id="vibrateOnRecord" type="boolean">false</property>
+    <property id="maxSeconds" type="number">60</property>
+    <property id="warnBeforeEnd" type="boolean">true</property>
 </properties>
