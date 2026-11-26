@@ -1,0 +1,3 @@
+# Treat XML (manifest, resources, settings) as generated for GitHub:
+# collapsed in pull request diffs and left out of the repository's language stats.
+*.xml linguist-generated=true
