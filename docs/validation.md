@@ -4,9 +4,9 @@ Passed:
 
 - Garmin SDK 9.3.0 device build for Venu 4 45 mm.
 - Release export for all 29 manifest profiles, covering 33 compiler device variants.
-- Six receiver integration tests: authentication and path validation; interrupted upload and idempotent retry; receiver restart; conflicting chunks; request limits and metadata; incomplete or invalid audio rejection.
+- Ten receiver tests cover uploads, resync, archive recovery, email queue persistence and deduplication, and the TLS SMTP attachment path with a test double.
 - Source type checking with warnings enabled. Launcher icons match the sizes in the device profiles.
-- NoRain-style PowerShell build and `just garmin-build-app`, with and without private settings.
+- PowerShell builds include private settings for up to three receivers and reject incomplete URL/token pairs. The `just garmin-build-app` command was also checked.
 - Existing development signing key preserved when copied to `private/developer_key.der`; public properties remain unchanged by personal builds.
 - Packaging with private settings and unknown device IDs rejected before compilation.
 - Bash build-script syntax checked; native Linux/macOS compilation was not run.
@@ -16,8 +16,9 @@ Not verified:
 - D2 Mach 2: excluded from the release manifest because the installed SDK lacks its device profile. The D2 Mach 2 Pro remains a release target.
 - Simulator UI and audio: the simulator process did not expose a usable window during this run.
 - Physical microphone capture, playback, firmware-dependent formats, and recording duration.
-- Garmin phone/Wi-Fi/LTE transport and background scheduler behavior on physical hardware.
+- Garmin phone/Wi-Fi/LTE transport, multi-target sync, the saved-notes actions, and background scheduler behavior on physical hardware.
 - Live HTTPS deployment: the receiver is implemented and locally tested, but no server was deployed.
+- Live SMTP delivery and mounted NAS access. The archive tests use a local folder and simulate unavailability.
 
 Artifacts:
 
@@ -28,9 +29,8 @@ Artifacts:
 Deferred upload implementation:
 
 - Local chunks and note metadata persist independently of connectivity.
-- Automatic uploads are opt-in; manual upload remains available.
-- Open-app retries back off from 30 seconds to five minutes.
-- On closing the app with automatic upload enabled, it registers a five-minute background interval. Garmin controls actual execution.
-- Background jobs persist each acknowledged chunk position and resume after interruptions.
-- Only the server's successful completion response marks a note uploaded.
+- Automatic sync is opt-in. Manual resync queues a recording for every configured receiver and survives app restarts.
+- While the home screen is open, each failed target retries after 15 seconds or on detected reconnection.
+- On closing the app with automatic upload enabled or a manual resync pending, it registers a five-minute background interval. Garmin controls actual execution.
+- Both foreground and background sync save each receiver's acknowledged chunk position. A receiver counts as synced only after its successful completion response.
 - Upload never removes the local recording.

@@ -13,8 +13,8 @@ The release manifest includes 29 Garmin product IDs. The D2 Mach 2 is excluded b
 - Up to 40 notes. When the watch's storage is full, capture stops, earlier chunks are kept, and the note is labelled partial. Delete uploaded notes to free space.
 - Audio is written in 4 KB chunks. Interrupted recordings are labelled partial.
 - The app only captures in the foreground. The background service only uploads saved recordings.
-- Automatic deferred uploads run while the app is open, retrying with a delay of 30 seconds up to five minutes. After closing the app, a background job requests five-minute intervals. Garmin controls actual scheduling and can terminate jobs to free memory.
-- Background jobs save a progress marker after each acknowledged chunk, work on one note per invocation, and stop starting requests after 20 seconds to respect Garmin's 30-second job limit. An interrupted request is safely repeated later.
+- The app checks connectivity once per second on the home screen. Failed targets wait 15 seconds before retrying. A detected reconnection clears that wait. After closing the app, a pending manual resync or enabled automatic upload uses Garmin's five-minute background schedule.
+- Foreground and background sync save progress for each receiver after every acknowledged chunk. Background jobs stop starting requests after 20 seconds to respect Garmin's 30-second limit. An interrupted request is safely repeated later.
 - Networking uses Garmin's normal web-request transport. There is no explicit LTE-session activation or custom phone companion in this version; Wi-Fi/LTE availability must be verified per device.
 - Uploads are serial. Recording and playback wait for an active upload to finish. Notes are never automatically deleted.
 - The receiver is for one owner. It accepts notes up to 40 MB and 10,000 chunks and total stored files to approximately 1 GB. It retains uploaded chunks to support safe retries; monitor disk use and archive complete note folders as needed.
