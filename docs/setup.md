@@ -107,13 +107,26 @@ Before release, test on real hardware:
 
 `.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The compiled `Voicenotes.iq` is attached to the run for seven days. It is signed with a throwaway key, so don't publish it.
 
-Garmin only serves device profiles to a logged-in account, so the build job needs three repository secrets (Settings → Secrets and variables → Actions):
+Garmin only serves device profiles to a logged-in account. The build job downloads the SDK and profiles from Garmin with [connect-iq-sdk-manager-cli](https://github.com/lindell/connect-iq-sdk-manager-cli) on every run. Nothing from Garmin is cached or uploaded, because Garmin's SDK licence forbids hosting its files on other servers.
+
+Use a **separate Garmin account just for CI**, never your personal one: a Garmin Connect account also holds your health, location and payment data. Turn off two-step verification on that account only, because the CI login can't answer it.
+
+Add three repository secrets (Settings → Secrets and variables → Actions):
 
 | Secret | Value |
 | --- | --- |
-| `GARMIN_USERNAME` | Garmin developer account email |
-| `GARMIN_PASSWORD` | Its password. Two-step verification on the account will probably block the non-interactive login. |
-| `GARMIN_AGREEMENT_HASH` | Run `connect-iq-sdk-manager agreement view` locally ([install](https://github.com/lindell/connect-iq-sdk-manager-cli)), read the SDK licence and copy the acceptance hash it prints |
+| `GARMIN_USERNAME` | The CI account's email |
+| `GARMIN_PASSWORD` | Its password, unique to that account |
+| `GARMIN_AGREEMENT_HASH` | Run `connect-iq-sdk-manager agreement view` locally, read the SDK licence and copy the acceptance hash it prints |
+
+How the workflow protects the credentials:
+
+- Only the download step receives the secrets. Formatting, tests and the compile step never see them.
+- The build job doesn't run for pull requests from forks. Never change the trigger to `pull_request_target`, which would hand secrets to untrusted code.
+- Output from the agreement and login commands is discarded, GitHub masks secret values in logs, and the CLI's saved login token is deleted before any repository code runs.
+- The workflow token is read-only, isn't kept in the checkout, and the CLI binary is pinned by checksum.
+
+If you suspect a leak, change the CI account's password and update the secret.
 
 When Garmin publishes a new licence, the hash changes and the build fails until you update the secret.
 
