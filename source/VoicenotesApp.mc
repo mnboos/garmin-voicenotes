@@ -84,7 +84,7 @@ class VoicenotesApp extends Application.AppBase {
         WatchUi.pushView(menu, new SettingsDelegate(self), WatchUi.SLIDE_UP);
     }
     // Choices offered on the watch; Garmin Connect offers the same list (settings.xml).
-    const LENGTHS = [30, 60, 120, 300, 600, 1800, 0];
+    const LENGTHS = [10, 30, 60, 120, 300, 600, 1800, 0];
     function maxSeconds() as Lang.Number {
         var value = Application.Properties.getValue("maxSeconds");
         return value instanceof Lang.Number && value > 0 ? value : 0;

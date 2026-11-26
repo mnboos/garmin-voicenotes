@@ -6,6 +6,7 @@
     <setting propertyKey="@Properties.vibrateOnRecord" title="@Strings.VibrateLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.maxSeconds" title="@Strings.MaxLengthLabel">
         <settingConfig type="list">
+            <listEntry value="10">@Strings.Len10s</listEntry>
             <listEntry value="30">@Strings.Len30s</listEntry>
             <listEntry value="60">@Strings.Len1m</listEntry>
             <listEntry value="120">@Strings.Len2m</listEntry>

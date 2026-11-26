@@ -9,7 +9,7 @@ The release manifest includes 29 Garmin product IDs. The D2 Mach 2 is excluded b
 - Having a microphone does not guarantee API access. Older microphone devices absent from Garmin's Audio support list cannot be supported by adding their IDs.
 - Some devices in Garmin's Audio list may only support output. The app checks capture-format support before recording and reports unavailable capture.
 - Ogg/Opus mono at 16 kHz is preferred. WAV/LPCM mono at 8 kHz is the fallback.
-- Recordings are limited by duration, not size. The maximum length is a setting (30 s to 30 min, or no limit; default 1 min), with an optional vibration 10 seconds before the end. The watch's own app storage limit, which Garmin varies by device (often around 128 KB), is the practical ceiling: when it is reached, recording stops early.
+- Recordings are limited by duration, not size. The maximum length is a setting (10 s to 30 min, or no limit; default 1 min), with an optional vibration 10 seconds before the end. The watch's own app storage limit, which Garmin varies by device (often around 128 KB), is the practical ceiling: when it is reached, recording stops early.
 - Up to 40 notes. When the watch's storage is full, capture stops, earlier chunks are kept, and the note is labelled partial. Delete uploaded notes to free space.
 - Audio is written in 4 KB chunks. Interrupted recordings are labelled partial.
 - The app only captures in the foreground. The background service only uploads saved recordings.

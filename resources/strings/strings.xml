@@ -7,6 +7,7 @@
     <string id="VibrateLabel">Vibrate when recording starts</string>
     <string id="MaxLengthLabel">Maximum recording length</string>
     <string id="WarnLabel">Vibrate 10 seconds before the maximum length</string>
+    <string id="Len10s">10 seconds</string>
     <string id="Len30s">30 seconds</string>
     <string id="Len1m">1 minute</string>
     <string id="Len2m">2 minutes</string>
