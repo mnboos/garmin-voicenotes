@@ -76,6 +76,11 @@ jobs:
             echo "::error::Set GARMIN_USERNAME, GARMIN_PASSWORD and GARMIN_AGREEMENT_HASH secrets (see docs/setup.md)."
             exit 1
           fi
+          # Secrets pasted into GitHub often carry a trailing newline.
+          GARMIN_USERNAME="$(printf '%s' "$GARMIN_USERNAME" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          GARMIN_PASSWORD="$(printf '%s' "$GARMIN_PASSWORD" | tr -d '\r\n')"
+          GARMIN_AGREEMENT_HASH="$(printf '%s' "$GARMIN_AGREEMENT_HASH" | tr -d '[:space:]')"
+          export GARMIN_USERNAME GARMIN_PASSWORD
           connect-iq-sdk-manager agreement accept --agreement-hash="$GARMIN_AGREEMENT_HASH" >/dev/null
           connect-iq-sdk-manager login >/dev/null
           connect-iq-sdk-manager sdk set "$SDK_VERSION"
