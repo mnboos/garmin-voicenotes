@@ -13,6 +13,23 @@ Build with `just garmin-build-app`. The app is named **Voicenotes** and the outp
 - Offline recordings and manual resync requests stay queued. The watch checks for connectivity while the app is open and uses Garmin's scheduled background jobs after closing. Manual resync works with automatic upload disabled.
 - The receiver can email recordings as attachments, copy them to a mounted network share, or do both.
 
-[Build and run](docs/setup.md) · [Limits and compatibility](docs/compatibility.md) · [Verification](docs/validation.md)
+[Build and run](docs/setup.qmd) · [Limits and compatibility](docs/compatibility.qmd) · [Verification](docs/validation.qmd)
 
 This is a prototype. Device compilation and receiver tests do not establish microphone quality or reliability on physical watches.
+
+## Documentation
+
+See the [documentation index](docs/index.qmd) and [verification results](docs/validation.qmd). Run `quarto preview docs` to preview the site or `quarto render docs` to build `docs/_site`.
+
+To serve the site at `http://localhost:8080` with Docker, run:
+
+```sh
+docker build -t voicenotes-docs docs
+docker run --rm -p 127.0.0.1:8080:8080 voicenotes-docs
+```
+
+The Docker build uses Linux amd64 for Quarto and a native runtime image.
+
+## License
+
+[GNU Affero General Public License, version 3 only](LICENSE) (`AGPL-3.0-only`). Third-party materials retain their licenses.

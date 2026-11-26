@@ -1,4 +1,6 @@
-# Compatibility and limits
+---
+title: Compatibility and limits
+---
 
 Checked against Garmin's documentation on 23 November 2026.
 

@@ -1,0 +1,22 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: Voicenotes
+  sidebar:
+    search: true
+    contents:
+      - href: index.qmd
+        text: Documentation home
+      - section: How-to guides
+        contents:
+          - setup.qmd
+      - section: Reference
+        contents:
+          - compatibility.qmd
+          - validation.qmd
+
+format:
+  html:
+    toc: true
