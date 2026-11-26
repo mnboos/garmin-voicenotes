@@ -107,36 +107,9 @@ Before release, test on real hardware:
 
 `.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The compiled `Voicenotes.iq` is attached to the run for seven days. It is signed with a throwaway key, so don't publish it.
 
-Garmin only serves device profiles to a logged-in account. The build job downloads the SDK and profiles from Garmin with [connect-iq-sdk-manager-cli](https://github.com/lindell/connect-iq-sdk-manager-cli) on every run. Nothing from Garmin is cached or uploaded, because Garmin's SDK licence forbids hosting its files on other servers.
+The build job needs no secrets. It runs `build.sh --package` inside `ghcr.io/blackshadev/garmin-connectiq-tools`, the image behind the [Garmin ConnectIQ Build](https://github.com/marketplace/actions/garmin-connectiq-build) action, which already contains the Connect IQ SDK and device profiles. The workflow pins the image by digest. To move to a newer SDK, take the digest of a newer tag and update `CONNECTIQ_IMAGE` in `.github/workflows/ci.yml`.
 
-Use a **separate Garmin account just for CI**, never your personal one: a Garmin Connect account also holds your health, location and payment data. Turn off two-step verification on that account only, because the CI login can't answer it.
-
-Add three repository secrets (Settings → Secrets and variables → Actions):
-
-| Secret | Value |
-| --- | --- |
-| `GARMIN_USERNAME` | The CI account's email |
-| `GARMIN_PASSWORD` | Its password, unique to that account |
-| `GARMIN_AGREEMENT_HASH` | The acceptance hash of Garmin's SDK licence (see below) |
-
-To get the agreement hash, install the SDK manager CLI and view the licence:
-
-```bash
-brew install --cask connectiq-sdk-manager   # macOS
-connect-iq-sdk-manager agreement view
-```
-
-On other systems, download it from the [releases page](https://github.com/lindell/connect-iq-sdk-manager-cli/releases). Read the licence, then copy the acceptance hash it prints. Don't type `SdkManager` instead: on macOS that name can run Android's `sdkmanager`.
-
-How the workflow protects the credentials:
-
-- Only the download step receives the secrets. Formatting, tests and the compile step never see them.
-- The build job doesn't run for pull requests from forks. Never change the trigger to `pull_request_target`, which would hand secrets to untrusted code.
-- Output from the agreement and login commands is discarded, GitHub masks secret values in logs, and the CLI's saved login token is deleted before any repository code runs.
-- The workflow token is read-only, isn't kept in the checkout, and the CLI binary is pinned by checksum.
-
-If you suspect a leak, change the CI account's password and update the secret.
-
-When Garmin publishes a new licence, the hash changes and the build fails until you update the secret.
+- The image is maintained by a third party, not Garmin. Garmin's SDK licence forbids hosting SDK files on other servers, so the image may be taken down. If it disappears, CI fails at the compile step.
+- If the image lacks a profile for a device in `manifest.xml`, compilation fails for that device.
 
 To block merging until CI passes, add a branch ruleset for `main` (Settings → Rules → Rulesets) that requires a pull request and the status checks **Format check**, **Receiver tests** and **Compile watch app**.

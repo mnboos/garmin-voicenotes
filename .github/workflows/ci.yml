@@ -38,61 +38,22 @@ jobs:
 
   build:
     name: Compile watch app
-    # Never run with secrets on code from forks. Do not switch this workflow to pull_request_target.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
-      SDK_VERSION: "^9.3.0"
-      CLI_VERSION: "0.8.4"
-      CLI_SHA256: 4f5710d45b287ff7cf1dc821459ebef6736dcf37b57ed2de2ec234bf94610b79
+      # Image used by blackshadev/garmin-connectiq-build-action 9.3.0: Connect IQ SDK 9.3.0
+      # with device profiles. Pinned by digest; update deliberately.
+      CONNECTIQ_IMAGE: ghcr.io/blackshadev/garmin-connectiq-tools@sha256:5188a3bf7cf6511cb82c025666a4025edd0ec12218425a29e18d50c7594ca865
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
 
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Install Connect IQ SDK manager
-        run: |
-          deb="connect-iq-sdk-manager-cli_${CLI_VERSION}_amd64.deb"
-          curl -sSfLO "https://github.com/lindell/connect-iq-sdk-manager-cli/releases/download/v${CLI_VERSION}/${deb}"
-          echo "${CLI_SHA256}  ${deb}" | sha256sum -c -
-          sudo dpkg -i "$deb"
-          rm "$deb"
-
-      # The only step that sees the Garmin secrets. Its login token is deleted before any
-      # repository code runs, and nothing from the home directory is cached or uploaded.
-      - name: Download SDK and device profiles from Garmin
-        env:
-          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-          GARMIN_AGREEMENT_HASH: ${{ secrets.GARMIN_AGREEMENT_HASH }}
-        run: |
-          trap 'rm -rf ~/.connect-iq-sdk-manager' EXIT
-          if [ -z "$GARMIN_USERNAME" ] || [ -z "$GARMIN_PASSWORD" ] || [ -z "$GARMIN_AGREEMENT_HASH" ]; then
-            echo "::error::Set GARMIN_USERNAME, GARMIN_PASSWORD and GARMIN_AGREEMENT_HASH secrets (see docs/setup.md)."
-            exit 1
-          fi
-          # Secrets pasted into GitHub often carry a trailing newline.
-          GARMIN_USERNAME="$(printf '%s' "$GARMIN_USERNAME" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-          GARMIN_PASSWORD="$(printf '%s' "$GARMIN_PASSWORD" | tr -d '\r\n')"
-          GARMIN_AGREEMENT_HASH="$(printf '%s' "$GARMIN_AGREEMENT_HASH" | tr -d '[:space:]')"
-          export GARMIN_USERNAME GARMIN_PASSWORD
-          connect-iq-sdk-manager agreement accept --agreement-hash="$GARMIN_AGREEMENT_HASH" >/dev/null
-          connect-iq-sdk-manager login >/dev/null
-          connect-iq-sdk-manager sdk set "$SDK_VERSION"
-          connect-iq-sdk-manager device download --manifest=manifest.xml
-          echo "CONNECTIQ_SDK=$(connect-iq-sdk-manager sdk current-path)" >> "$GITHUB_ENV"
-
-      - name: Check no login token remains
-        run: test ! -e ~/.connect-iq-sdk-manager
-
       # build.sh generates a throwaway signing key; the package is for verification only.
       - name: Compile all manifest devices
-        run: bash build.sh --package
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -e CONNECTIQ_SDK=/connectiq \
+            --entrypoint /bin/sh "$CONNECTIQ_IMAGE" \
+            -c 'apk add --no-cache -q bash python3 openssl && bash build.sh --package'
 
       - uses: actions/upload-artifact@v4
         with:
