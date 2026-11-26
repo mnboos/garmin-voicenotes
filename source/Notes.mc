@@ -22,16 +22,22 @@ class Notes {
     function refreshUploads() {
         for (var i = 0; i < items.size(); i++) {
             var item = items[i] as Lang.Dictionary;
-            if (Application.Storage.getValue("sent:" + item["id"]) == true) { item["uploaded"] = true; }
+            if (Application.Storage.getValue("sent:" + item["id"]) == true) {
+                item["uploaded"] = true;
+            }
         }
     }
-    function save() { Application.Storage.setValue("notes", items); }
+    function save() {
+        Application.Storage.setValue("notes", items);
+    }
     function create(format as Lang.Dictionary, extension) {
         if (items.size() >= 40) {
             throw new Lang.InvalidValueException("Storage full");
         }
         var seq = Application.Storage.getValue("sequence");
-        if (seq == null) { seq = 0; }
+        if (seq == null) {
+            seq = 0;
+        }
         seq += 1;
         Application.Storage.setValue("sequence", seq);
         var installation = Application.Storage.getValue("installation");
@@ -40,10 +46,22 @@ class Notes {
             Application.Storage.setValue("installation", installation);
         }
         var id = installation + "-" + Time.now().value().toString() + "-" + seq.toString();
-        var note = {"id"=>id, "created"=>Time.now().value(), "chunks"=>0,
-            "bytes"=>0, "seconds"=>0, "state"=>"recording", "uploaded"=>false,
-            "extension"=>extension, "format"=>[format[:containerFormat], format[:codec],
-                format[:frequency], format[:channels]]};
+        var note = {
+            "id" => id,
+            "created" => Time.now().value(),
+            "chunks" => 0,
+            "bytes" => 0,
+            "seconds" => 0,
+            "state" => "recording",
+            "uploaded" => false,
+            "extension" => extension,
+            "format" => [
+                format[:containerFormat],
+                format[:codec],
+                format[:frequency],
+                format[:channels]
+            ]
+        };
         items.add(note);
         save();
         return note;
@@ -53,7 +71,9 @@ class Notes {
         Application.Storage.setValue(key, data);
         note["chunks"] += 1;
         note["bytes"] += data.size();
-        try { save(); } catch (e) {
+        try {
+            save();
+        } catch (e) {
             note["chunks"] -= 1;
             note["bytes"] -= data.size();
             Application.Storage.deleteValue(key);
@@ -65,7 +85,7 @@ class Notes {
     }
     function format(note as Lang.Dictionary) {
         var f = note["format"] as Lang.Array;
-        return {:containerFormat=>f[0], :codec=>f[1], :frequency=>f[2], :channels=>f[3]};
+        return { :containerFormat => f[0], :codec => f[1], :frequency => f[2], :channels => f[3] };
     }
     function remove(note as Lang.Dictionary) {
         for (var i = 0; i < note["chunks"]; i++) {

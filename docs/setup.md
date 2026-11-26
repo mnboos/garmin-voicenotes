@@ -81,6 +81,14 @@ The receiver preserves source bytes without transcoding. It validates the contai
 
 ## Verify changes
 
+Format the watch source with Prettier and its Monkey C plugin (Node.js needed; run `npm install` once):
+
+```bash
+just format   # rewrite source/*.mc
+just lint     # check only
+```
+
+
 ```powershell
 python -m unittest discover -s server -v
 ```

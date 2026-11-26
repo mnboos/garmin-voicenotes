@@ -61,3 +61,13 @@ garmin-simulator:
 [windows]
 garmin-check:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File verify-devices.ps1
+
+[doc("Format the Monkey C source with Prettier. Run `npm install` once first.")]
+[group('lint')]
+format:
+    npm run format
+
+[doc("Check Monkey C formatting without changing files.")]
+[group('lint')]
+lint:
+    npm run lint
