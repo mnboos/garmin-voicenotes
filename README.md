@@ -1,21 +1,28 @@
-# Voicenotes
+# Voicenotes for Garmin
 
-A Garmin Connect IQ watch app for microphone recordings, local playback, and server export.
+**Press START. Say it. Keep moving.**
 
-Build with `just garmin-build-app`. The app is named **Voicenotes** and the output is `bin/Voicenotes.prg`. Run `just --list` for build, packaging, and simulator commands.
+Record ideas and reminders right from your Garmin watch, even when you're offline.
 
-- Record using START or the central touch target. START or BACK stops and saves.
-- Open saved notes with MENU, DOWN, or the bottom touch target.
-- Select a note to open it: tap or START plays, **swipe left** deletes, MENU or DOWN shows Play / Resync / Delete. Deletion requires confirmation.
-- Saved notes menu → **Settings** (last item): start recording automatically when the app opens, vibrate when recording starts, set the maximum recording length (10 s to 30 min, or no limit), and vibrate 10 seconds before that limit. Both are also in Garmin Connect's app settings.
-- The list shows each note's sync status. Recordings stay on the watch after sync.
-- Configure up to three Voicenotes-compatible HTTPS receivers and their access tokens in Garmin Connect's app settings. Enable automatic upload to send saved recordings to all configured targets.
-- Offline recordings and manual resync requests stay queued. The watch checks for connectivity while the app is open and uses Garmin's scheduled background jobs after closing. Manual resync works with automatic upload disabled.
-- The receiver can email recordings as attachments, copy them to a mounted network share, or do both.
+<p align="center">
+  <img src="screenshot.png" width="280" alt="Voicenotes on a Garmin watch, with a microphone button and three saved notes">
+</p>
 
-[Build and run](docs/setup.qmd) · [Limits and compatibility](docs/compatibility.qmd) · [Verification](docs/validation.qmd)
+- **Record and replay on your wrist.** Your notes stay on the watch after syncing.
+- **Take your notes with you.** Pull recordings into the Android companion while the watch app is open.
+- **Send recordings to your own server.** Uploads queue offline, and your server can email the audio or save it to a network share.
 
-This is a prototype. Device compilation and receiver tests do not establish microphone quality or reliability on physical watches.
+[Build and run](docs/setup.qmd) · [Compatible watches](docs/compatibility.qmd) · [Test results](docs/validation.qmd)
+
+Voicenotes is a prototype. Recording reliability on physical watches still needs testing.
+
+## Support
+
+If Voicenotes helps you catch an idea on the go, consider supporting its development.
+
+<!-- Add GitHub Sponsors and 🍺 Buy me a beer links here when your funding pages are ready. -->
+
+[AGPL-3.0-only](LICENSE)
 
 ## Documentation
 
