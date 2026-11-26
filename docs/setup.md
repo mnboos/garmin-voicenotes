@@ -117,7 +117,16 @@ Add three repository secrets (Settings → Secrets and variables → Actions):
 | --- | --- |
 | `GARMIN_USERNAME` | The CI account's email |
 | `GARMIN_PASSWORD` | Its password, unique to that account |
-| `GARMIN_AGREEMENT_HASH` | Run `connect-iq-sdk-manager agreement view` locally, read the SDK licence and copy the acceptance hash it prints |
+| `GARMIN_AGREEMENT_HASH` | The acceptance hash of Garmin's SDK licence (see below) |
+
+To get the agreement hash, install the SDK manager CLI and view the licence:
+
+```bash
+brew install --cask connectiq-sdk-manager   # macOS
+connect-iq-sdk-manager agreement view
+```
+
+On other systems, download it from the [releases page](https://github.com/lindell/connect-iq-sdk-manager-cli/releases). Read the licence, then copy the acceptance hash it prints. Don't type `SdkManager` instead: on macOS that name can run Android's `sdkmanager`.
 
 How the workflow protects the credentials:
 
