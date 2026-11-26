@@ -112,7 +112,7 @@ Garmin only serves device profiles to a logged-in account, so the build job need
 | Secret | Value |
 | --- | --- |
 | `GARMIN_USERNAME` | Garmin developer account email |
-| `GARMIN_PASSWORD` | Its password. The account must not use two-step verification. |
+| `GARMIN_PASSWORD` | Its password. Two-step verification on the account will probably block the non-interactive login. |
 | `GARMIN_AGREEMENT_HASH` | Run `connect-iq-sdk-manager agreement view` locally ([install](https://github.com/lindell/connect-iq-sdk-manager-cli)), read the SDK licence and copy the acceptance hash it prints |
 
 When Garmin publishes a new licence, the hash changes and the build fails until you update the secret.
