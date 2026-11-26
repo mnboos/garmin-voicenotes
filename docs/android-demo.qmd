@@ -2,24 +2,18 @@
 title: "Send your first simulated voice note"
 ---
 
-In this tutorial, you’ll send a two-second sample from a simulated Venu 4 to the Android inbox. The sample plays automatically when it arrives.
+Follow the [simulator requirements](simulator-test-reference.qmd#environment) and stop the Voicenotes receiver.
 
-## Before you start
-
-Install Connect IQ SDK 9.3.0 or newer and set up the Venu 4 45 mm profile and the Android virtual phone. See the [simulator test reference](simulator-test-reference.qmd) for the Android build requirements. Leave the Voicenotes receiver stopped.
-
-## Send the sample
-
-1. Run `just android-emulator` in its own terminal and wait for the phone to boot.
-2. Build and start the inbox from the repository root.
+1. Run `just android-emulator` in its own terminal and wait for Android to boot.
+2. From the repository root, build and open the inbox.
 
    ```sh
    just android-build
    just android-preview demo
    ```
 
-3. Run `just garmin-simulator` and then `just garmin-run-fixture` (it builds with `--companion`). In the Garmin simulator, choose **adb Connection → Start**. Wait for **Connected · inbox up to date** in Android.
-4. Press START on the simulated watch. The watch generates a WAV and adds it to **Saved notes**. The Android inbox receives and plays it.
-5. Check that the watch shows **On phone**. Tap **Play note** on Android to hear the sample again.
+3. Run `just garmin-simulator`, then `just garmin-run-fixture`. In the Garmin simulator, choose **adb Connection → Start** and wait for **Connected · inbox up to date** on Android.
+4. Press START on the simulated watch. The two-second sample arrives and plays on Android. The watch shows **On phone** in **Saved notes**.
+5. Tap **Play note** on Android to hear it again.
 
-Use the [simulator test guide](run-simulator-tests.qmd) to repeat delivery, reconnect, and app-exit checks and collect the results.
+[Run the automated simulator checks](run-simulator-tests.qmd)

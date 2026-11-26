@@ -4,32 +4,32 @@ title: "Simulator test reference"
 
 ## Environment
 
-- macOS with a desktop session and Python 3.10 or newer.
-- Connect IQ SDK 9.3.0 or newer and the Venu 4 45 mm profile (`venu445mm`).
-- The private Android companion source at `~/src/garmin-voicenotes-companion`. Set `VOICENOTES_COMPANION_DIR` if you keep it elsewhere.
-- JDK 11 or newer, Android SDK build-tools 36.0.0, Android platform `android-37.0`, and ADB. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` if the SDK is elsewhere.
-- The default AVD is `Medium_Phone_API_37.0`. The receiver’s default port, 8787, must be idle during the run.
+- macOS desktop session and Python 3.10 or newer.
+- Connect IQ SDK 9.3.0 or newer with the Venu 4 45 mm profile (`venu445mm`).
+- Private companion source at `~/src/garmin-voicenotes-companion`, or set `VOICENOTES_COMPANION_DIR`.
+- JDK 11 or newer, Android build-tools 36.0.0, platform `android-37.0`, and ADB. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` if needed.
+- Default AVD `Medium_Phone_API_37.0`. Keep port 8787 free during tests.
 
 ## Recipes
 
 | Recipe | Result |
 | --- | --- |
-| `just garmin-run-fixture` | Builds and loads the watch fixture for the manual demo. |
+| `just garmin-run-fixture` | Loads the watch fixture for the manual demo. |
 | `just android-build` | Builds `bin/android/Voicenotes-debug.apk`. |
 | `just android-emulator [avd]` | Boots the selected virtual phone. |
-| `just test-simulator [serial]` | Requires foreground delivery and reconnect recovery. Records the background result. |
-| `just test-simulator-background [serial]` | Also requires delivery while the watch app is exited. |
+| `just test-simulator [serial]` | Requires foreground delivery and reconnect recovery. Records background delivery. |
+| `just test-simulator-background [serial]` | Also requires delivery with the watch app closed. |
 
-The suite installs `bin/android/Voicenotes-test.apk` under `ch.voicenotes.inbox.e2e` and runs a separate watch app named `VNE2E`. Each run starts with empty test app storage. The Android test inbox listens on emulator port 17381. The runner relays the Garmin tether on host port 7381 and restores an existing direct forward for the selected emulator after the test.
+The suite uses a fresh `VNE2E` watch app and `bin/android/Voicenotes-test.apk` (`ch.voicenotes.inbox.e2e`). The host tether uses port 7381 and the emulator inbox uses 17381. The runner restores an existing direct ADB forward for the selected emulator.
 
 ## Assertions and artifacts
 
-| Check | Evidence |
+| Check | Expected result |
 | --- | --- |
-| Foreground delivery | Two-way message, watch receipt, complete WAV hash, and Android playback completion without input. |
-| Interrupted transfer | The Android inbox restarts with a partial file. The next offer resumes at the saved offset. Exactly one final WAV exists for that note ID. |
-| Watch app exited | A fresh note is queued before exit. The runner observes whether Android saves it within 25 seconds of an Android sync request and verifies delivery of the same note after reopening. |
+| Foreground | Watch receipt, matching WAV hash, and automatic playback. |
+| Reconnect | The restarted inbox resumes at the saved offset and produces one WAV per note ID. |
+| Watch app closed | The runner checks for delivery within 25 seconds of an Android sync request and verifies delivery after reopening. |
 
-The fixture is a 32,044-byte WAV with SHA-256 `953ea453dce7245c7e2153012000d3bf686cee2b75cc6d30f60da90812b64022`. The runner writes logs, verified WAVs, and the background result to `.tools/simulator-tests/<run>/` as it completes each check. The background result is in `background.txt`.
+The 32,044-byte WAV has SHA-256 `953ea453dce7245c7e2153012000d3bf686cee2b75cc6d30f60da90812b64022`. Logs, WAVs, and `background.txt` are saved in `.tools/simulator-tests/<run>/`.
 
 [Garmin simulator connection guide](https://developer.garmin.com/connect-iq/articles/core-topics/Communicating_with_Mobile_Apps.html)

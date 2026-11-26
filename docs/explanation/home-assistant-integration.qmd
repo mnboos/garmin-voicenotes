@@ -2,10 +2,6 @@
 title: "How Voicenotes connects to Home Assistant"
 ---
 
-The receiver handles audio uploads. The watch sends binary chunks to the receiver’s HTTPS endpoint, followed by a request to assemble the recording. The receiver acknowledges each successful request with HTTP `200` and `{"ok": true}`. It writes `note.ogg` or `note.wav` before moving a temporary metadata file into place as `metadata.json`. The source files are `src/UploadRequest.mc` and `server/receiver.py`.
+The receiver assembles the watch’s audio chunks, saves the recording, then renames `metadata.json.tmp` to `metadata.json`. Home Assistant’s Folder Watcher uses that move to trigger the notification after the audio is ready. [Set up a notification](../how-to/home-assistant-notifications.qmd)
 
-Home Assistant can use that final file move to start an automation. Folder Watcher sees the move after the audio has been saved. This works when Home Assistant can read the receiver’s data directory and receive its filesystem events. [Set up a notification](../how-to/home-assistant-notifications.qmd)
-
-A Home Assistant webhook accepts a request to start an automation and can pass JSON data to it. Hosting the watch’s upload endpoint in Home Assistant would require code that accepts the audio chunks, stores and assembles them, and returns the acknowledgments the watch expects. [Home Assistant webhook documentation](https://www.home-assistant.io/triggers/webhook/)
-
-When Home Assistant cannot watch the receiver’s files, a small bridge could send a JSON event to a Home Assistant webhook after each note is saved. The event could carry the note ID and recording time while the audio stays in the receiver’s data directory. Automatic webhook forwarding would require adding that bridge. [Home Assistant webhook documentation](https://www.home-assistant.io/triggers/webhook/)
+If Home Assistant cannot receive file events, a custom bridge could send a webhook event with the note ID and recording time after the receiver saves the file. The receiver handles audio storage and acknowledges the watch’s upload requests. [Home Assistant webhook documentation](https://www.home-assistant.io/triggers/webhook/)

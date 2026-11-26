@@ -3,7 +3,7 @@ title: Voicenotes documentation
 toc: false
 ---
 
-Voicenotes records microphone audio on supported Garmin watches. Play recordings on the watch, export them to an HTTPS receiver, or send them to the Android companion beta on a supported fēnix 8.
+Record and play voice notes on a Garmin watch, then export them to an HTTPS receiver or an Android phone.
 
 ## Tutorials
 

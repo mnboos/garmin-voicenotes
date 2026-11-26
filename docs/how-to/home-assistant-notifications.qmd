@@ -2,16 +2,11 @@
 title: "Get notified in Home Assistant when a voice note is saved"
 ---
 
-Use Home Assistant’s Folder Watcher to show a notification when the Voicenotes receiver finishes saving a recording. This setup uses the existing receiver and a Home Assistant automation.
-
-## Before you start
-
-- [Set up the export receiver](../setup.qmd#run-the-export-receiver) and confirm that your watch can upload a note.
-- Make the receiver’s data directory readable from Home Assistant. Use the path as Home Assistant sees it, such as `/media/voicenotes`. If Home Assistant runs in a container, use the path inside that container. The filesystem needs to deliver file move events to Home Assistant.
+[Set up the receiver](../setup.qmd#run-the-export-receiver) and upload a test note. Home Assistant needs read access to the data directory and must receive file move events. Use the path Home Assistant sees, including inside its container.
 
 ## Add Folder Watcher
 
-1. Add the directory to `allowlist_external_dirs` in Home Assistant’s `configuration.yaml`. Replace `/media/voicenotes` with your path. If you already have a `homeassistant` section, add the directory to its existing configuration. Restart Home Assistant to load the change. [Home Assistant configuration reference](https://www.home-assistant.io/docs/configuration/basic/#allowlist_external_dirs)
+1. Add the data directory to the existing `homeassistant` section in `configuration.yaml`. Replace `/media/voicenotes` with your path and restart Home Assistant. [Configuration reference](https://www.home-assistant.io/docs/configuration/basic/#allowlist_external_dirs)
 
    ```yaml
    homeassistant:
@@ -19,13 +14,13 @@ Use Home Assistant’s Folder Watcher to show a notification when the Voicenotes
        - /media/voicenotes
    ```
 
-2. Go to **Settings → Devices & services → Add integration** and select **Folder Watcher**. Enter the same directory and set the pattern to `*metadata.json`. Folder Watcher also checks each note’s subdirectory. [Folder Watcher documentation](https://www.home-assistant.io/integrations/folder_watcher/)
-3. Open the integration’s device page, select its event entity, and copy the entity ID.
+2. Under **Settings → Devices & services → Add integration**, add **Folder Watcher**. Enter the same directory and the pattern `*metadata.json` to watch note subdirectories. [Folder Watcher documentation](https://www.home-assistant.io/integrations/folder_watcher/)
+3. Open the integration’s device page and copy its event entity ID.
 
 ## Create the automation
 
-1. Go to **Settings → Automations & scenes** and create an automation. Open the automation’s menu and select **Edit in YAML**.
-2. Paste the example below and replace `event.folder_watcher_voicenotes` with your event entity ID. Save the automation.
+1. Under **Settings → Automations & scenes**, create an automation and choose **Edit in YAML**.
+2. Paste this example and replace `event.folder_watcher_voicenotes` with your entity ID.
 
    ```yaml
    alias: Garmin voice note saved
@@ -47,12 +42,12 @@ Use Home Assistant’s Folder Watcher to show a notification when the Voicenotes
    mode: queued
    ```
 
-3. Record a short note and upload it from **Saved notes** on the watch. Check the **Notifications** panel in Home Assistant for **Garmin voice note saved**.
+3. Save, then upload a new note from **Saved notes**. Look for **Garmin voice note saved** in Home Assistant’s **Notifications** panel.
 
-## If the notification is missing
+## Troubleshoot
 
-- Check the receiver for `NOTE_ID/metadata.json`. If it is missing, check the watch’s upload status and the [receiver setup](../setup.qmd#run-the-export-receiver).
-- If the file exists, check whether the Folder Watcher entity updates when you upload a fresh note. Check the directory path, permissions, and pattern. Some network mounts let Home Assistant read files but do not report moves made by another machine.
-- If the entity updates, open the automation’s **Traces** and check the trigger and condition. [Home Assistant automation testing](https://www.home-assistant.io/docs/automation/testing/)
+- **No `NOTE_ID/metadata.json`.** Check the watch’s upload status.
+- **File exists, event entity stays unchanged.** Check the path, permissions, and pattern. Some network mounts do not relay file moves.
+- **Entity updates, notification missing.** Check the automation’s **Traces** for the trigger and condition. [Automation testing guide](https://www.home-assistant.io/docs/automation/testing/)
 
-For setups where Home Assistant cannot watch the data directory, see [How Voicenotes connects to Home Assistant](../explanation/home-assistant-integration.qmd).
+[How the receiver signals a completed upload](../explanation/home-assistant-integration.qmd)
