@@ -78,7 +78,28 @@ class VoicenotesApp extends Application.AppBase {
             Application.Properties.getValue("autoRecord") == true, null));
         menu.addItem(new WatchUi.ToggleMenuItem("Vibrate", "When recording starts", "vibrateOnRecord",
             Application.Properties.getValue("vibrateOnRecord") == true, null));
-        WatchUi.pushView(menu, new SettingsDelegate(), WatchUi.SLIDE_UP);
+        menu.addItem(new WatchUi.MenuItem("Max length", lengthLabel(maxSeconds()), "maxSeconds", null));
+        menu.addItem(new WatchUi.ToggleMenuItem("Warn before end", "Vibrate 10 s before limit", "warnBeforeEnd",
+            Application.Properties.getValue("warnBeforeEnd") != false, null));
+        WatchUi.pushView(menu, new SettingsDelegate(self), WatchUi.SLIDE_UP);
+    }
+    // Choices offered on the watch; Garmin Connect offers the same list (settings.xml).
+    const LENGTHS = [30, 60, 120, 300, 600, 1800, 0];
+    function maxSeconds() as Lang.Number {
+        var value = Application.Properties.getValue("maxSeconds");
+        return value instanceof Lang.Number && value > 0 ? value : 0;
+    }
+    function lengthLabel(seconds) as Lang.String {
+        if (seconds <= 0) { return "No limit"; }
+        if (seconds < 60) { return seconds + " s"; }
+        return (seconds / 60) + " min";
+    }
+    function showLengths(parent as WatchUi.MenuItem) {
+        var menu = new WatchUi.Menu2({:title=>"Max length", :focus=>LENGTHS.indexOf(maxSeconds()) < 0 ? 0 : LENGTHS.indexOf(maxSeconds())});
+        for (var i = 0; i < LENGTHS.size(); i++) {
+            menu.addItem(new WatchUi.MenuItem(lengthLabel(LENGTHS[i]), null, LENGTHS[i], null));
+        }
+        WatchUi.pushView(menu, new LengthDelegate(self, parent), WatchUi.SLIDE_UP);
     }
     function toggle() {
         if (player != null) { Audio.Output.stop(); player = null; return; }
@@ -98,7 +119,7 @@ class VoicenotesApp extends Application.AppBase {
         }
         if (notes.items.size() == 0) { menu.addItem(new WatchUi.MenuItem("No notes yet", null, "empty", null)); }
         // Last item; Menu2 wraps, so it is one UP press from the top.
-        menu.addItem(new WatchUi.MenuItem("Settings", "Auto-record, vibration", "settings", null));
+        menu.addItem(new WatchUi.MenuItem("Settings", "Recording options", "settings", null));
         WatchUi.pushView(menu, new NotesDelegate(self), WatchUi.SLIDE_UP);
     }
 }
@@ -128,7 +149,10 @@ class HomeView extends WatchUi.View {
             dc.drawLine(w/2-w*0.035, h*0.43+w*0.07, w/2+w*0.035, h*0.43+w*0.07);
         }
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
-        var status = app.recorder.active ? app.recorder.note["seconds"] + " seconds" : app.notes.items.size() + " notes";
+        var status = app.notes.items.size() + " notes";
+        if (app.recorder.active) {
+            status = app.recorder.note["seconds"] + (app.recorder.limit > 0 ? " / " + app.recorder.limit + " s" : " seconds");
+        }
         dc.drawText(w/2, h*0.59, Graphics.FONT_SMALL, status, Graphics.TEXT_JUSTIFY_CENTER);
         var msg = !app.recorder.active && app.upload.message.length() > 0 ? app.upload.message : app.recorder.message;
         dc.drawText(w/2, h*0.70, Graphics.FONT_XTINY, msg, Graphics.TEXT_JUSTIFY_CENTER);
@@ -205,9 +229,20 @@ class HomeDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 }
-class SettingsDelegate extends WatchUi.Menu2InputDelegate {
-    function initialize() { Menu2InputDelegate.initialize(); }
+class LengthDelegate extends WatchUi.Menu2InputDelegate {
+    var app; var parent;
+    function initialize(owner, item) { Menu2InputDelegate.initialize(); app = owner; parent = item; }
     function onSelect(item) {
+        Application.Properties.setValue("maxSeconds", item.getId() as Lang.Number);
+        parent.setSubLabel(app.lengthLabel(item.getId()));
+        WatchUi.popView(WatchUi.SLIDE_DOWN);
+    }
+}
+class SettingsDelegate extends WatchUi.Menu2InputDelegate {
+    var app;
+    function initialize(owner) { Menu2InputDelegate.initialize(); app = owner; }
+    function onSelect(item) {
+        if (item.getId().equals("maxSeconds")) { app.showLengths(item as WatchUi.MenuItem); return; }
         if (item instanceof WatchUi.ToggleMenuItem) {
             Application.Properties.setValue(item.getId() as Lang.String, item.isEnabled());
         }

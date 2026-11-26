@@ -5,4 +5,13 @@
     <string id="AutoLabel">Automatically upload queued notes (also in background)</string>
     <string id="AutoRecordLabel">Start recording when the app opens</string>
     <string id="VibrateLabel">Vibrate when recording starts</string>
+    <string id="MaxLengthLabel">Maximum recording length</string>
+    <string id="WarnLabel">Vibrate 10 seconds before the maximum length</string>
+    <string id="Len30s">30 seconds</string>
+    <string id="Len1m">1 minute</string>
+    <string id="Len2m">2 minutes</string>
+    <string id="Len5m">5 minutes</string>
+    <string id="Len10m">10 minutes</string>
+    <string id="Len30m">30 minutes</string>
+    <string id="LenNone">No limit</string>
 </strings>
