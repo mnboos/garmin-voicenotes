@@ -17,6 +17,7 @@ class VoicenotesApp extends Application.AppBase {
     var upload as Upload or Null = null;
     var timer;
     var player = null;
+    var autoStartPending = false;
     function initialize() {
         AppBase.initialize();
     }
@@ -27,6 +28,7 @@ class VoicenotesApp extends Application.AppBase {
         upload = new Upload(notes);
         timer = new Timer.Timer();
         timer.start(method(:tick), 1000, true);
+        autoStartPending = Application.Properties.getValue("autoRecord") == true;
         return [new HomeView(self), new HomeDelegate(self)];
     }
     function tick() as Void {
@@ -64,6 +66,20 @@ class VoicenotesApp extends Application.AppBase {
         }
         WatchUi.requestUpdate();
     }
+    // Runs once when the home view first appears, if auto-record is enabled.
+    function autoStart() {
+        if (!autoStartPending) { return; }
+        autoStartPending = false;
+        if (!recorder.active && player == null && !upload.busy) { recorder.start(); }
+    }
+    function showSettings() {
+        var menu = new WatchUi.Menu2({:title=>"Settings"});
+        menu.addItem(new WatchUi.ToggleMenuItem("Auto-record", "Start when app opens", "autoRecord",
+            Application.Properties.getValue("autoRecord") == true, null));
+        menu.addItem(new WatchUi.ToggleMenuItem("Vibrate", "When recording starts", "vibrateOnRecord",
+            Application.Properties.getValue("vibrateOnRecord") == true, null));
+        WatchUi.pushView(menu, new SettingsDelegate(), WatchUi.SLIDE_UP);
+    }
     function toggle() {
         if (player != null) { Audio.Output.stop(); player = null; return; }
         if (recorder.active) { recorder.stop(); }
@@ -81,6 +97,8 @@ class VoicenotesApp extends Application.AppBase {
             menu.addItem(new WatchUi.MenuItem(title, subtitle + " · " + n["seconds"] + "s", n["id"], null));
         }
         if (notes.items.size() == 0) { menu.addItem(new WatchUi.MenuItem("No notes yet", null, "empty", null)); }
+        // Last item; Menu2 wraps, so it is one UP press from the top.
+        menu.addItem(new WatchUi.MenuItem("Settings", "Auto-record, vibration", "settings", null));
         WatchUi.pushView(menu, new NotesDelegate(self), WatchUi.SLIDE_UP);
     }
 }
@@ -93,6 +111,7 @@ class HomeView extends WatchUi.View {
         app = owner;
         startButton = WatchUi.loadResource(Rez.JsonData.StartButton) as Lang.Array;
     }
+    function onShow() { app.autoStart(); }
     function onUpdate(dc) {
         var w = dc.getWidth(); var h = dc.getHeight();
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK); dc.clear();
@@ -126,18 +145,26 @@ class HomeView extends WatchUi.View {
     function drawButtonHint(dc) {
         var centerX = dc.getWidth() / 2.0;
         var centerY = dc.getHeight() / 2.0;
-        var buttonX;
-        var buttonY;
-        if (startButton.size() == 2) {
-            buttonX = startButton[0];
-            buttonY = startButton[1];
+        // Angle of the START button, counter-clockwise from 3 o'clock, in radians.
+        var angle;
+        if (startButton.size() == 1) {
+            // Per-device angle in degrees, e.g. resources-fenix8/start-button.xml.
+            angle = startButton[0].toFloat() * Math.PI / 180.0;
         } else {
-            if (!(Rez.Styles.system_loc__hint_button_right_top has :x)) { return; }
-            buttonX = Rez.Styles.system_loc__hint_button_right_top.x;
-            buttonY = Rez.Styles.system_loc__hint_button_right_top.y + 18;
+            var buttonX;
+            var buttonY;
+            if (startButton.size() == 2) {
+                buttonX = startButton[0];
+                buttonY = startButton[1];
+            } else {
+                if (!(Rez.Styles.system_loc__hint_button_right_top has :x)) { return; }
+                buttonX = Rez.Styles.system_loc__hint_button_right_top.x;
+                buttonY = Rez.Styles.system_loc__hint_button_right_top.y + 18;
+            }
+            angle = Math.atan2(centerY - buttonY, buttonX - centerX);
         }
+        var slope = -Math.tan(angle);
         var x = dc.getWidth() - 24;
-        var slope = (buttonY - centerY) / (buttonX - centerX);
         var y = centerY + (x - centerX) * slope;
         var stopping = app.recorder.active || app.player != null;
         dc.setColor(app.upload.busy || app.recorder.finishing ? Graphics.COLOR_DK_GRAY : Graphics.COLOR_RED,
@@ -145,7 +172,6 @@ class HomeView extends WatchUi.View {
         var strokeWidth = 4;
         dc.setPenWidth(strokeWidth);
         if (System.getDeviceSettings().screenShape == System.SCREEN_SHAPE_ROUND) {
-            var angle = Math.atan2(centerY - buttonY, buttonX - centerX);
             var degrees = angle * 180.0 / Math.PI;
             var radius = centerX - strokeWidth / 2;
             dc.drawArc(centerX, centerY, radius, Graphics.ARC_COUNTER_CLOCKWISE, degrees - 5, degrees + 5);
@@ -179,10 +205,19 @@ class HomeDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 }
+class SettingsDelegate extends WatchUi.Menu2InputDelegate {
+    function initialize() { Menu2InputDelegate.initialize(); }
+    function onSelect(item) {
+        if (item instanceof WatchUi.ToggleMenuItem) {
+            Application.Properties.setValue(item.getId() as Lang.String, item.isEnabled());
+        }
+    }
+}
 class NotesDelegate extends WatchUi.Menu2InputDelegate {
     var app as VoicenotesApp;
     function initialize(owner) { Menu2InputDelegate.initialize(); app = owner; }
     function onSelect(item) {
+        if (item.getId().equals("settings")) { app.showSettings(); return; }
         for (var i = 0; i < app.notes.items.size(); i++) {
             var note = app.notes.items[i] as Lang.Dictionary;
             if (note["id"].equals(item.getId())) {

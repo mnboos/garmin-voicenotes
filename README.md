@@ -8,6 +8,7 @@ Build with `just garmin-build-app`. The app is named **Voicenotes** and the outp
 - Open saved notes with MENU, DOWN, or the bottom touch target.
 - Play, upload, or delete a note. Deletion requires confirmation.
 - Recordings stay on the watch after upload.
+- Saved notes menu → **Settings** (last item): start recording automatically when the app opens, and vibrate when recording starts. Both are also in Garmin Connect's app settings.
 - Configure an HTTPS receiver, access token, and optional automatic upload in Garmin Connect's app settings.
 - Offline notes remain stored. Automatic upload retries while Voicenotes is open and through scheduled background jobs after closing it. Manual upload works with automatic upload disabled.
 

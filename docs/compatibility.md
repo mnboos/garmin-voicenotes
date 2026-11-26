@@ -9,15 +9,15 @@ The release manifest includes 29 Garmin product IDs. The D2 Mach 2 is excluded b
 - Having a microphone does not guarantee API access. Older microphone devices absent from Garmin's Audio support list cannot be supported by adding their IDs.
 - Some devices in Garmin's Audio list may only support output. The app checks capture-format support before recording and reports unavailable capture.
 - Ogg/Opus mono at 16 kHz is preferred. WAV/LPCM mono at 8 kHz is the fallback.
-- Maximum recording time is 60 seconds, subject to a shared 80,000-byte local audio budget. WAV reaches that budget in roughly five seconds. Opus duration depends on firmware encoding and remaining storage.
-- Up to 40 notes. Storage limits can still vary by device; failed writes stop capture and preserve earlier chunks.
+- Maximum recording time is 60 seconds, and each note is limited to 512,000 bytes in 128 chunks. There is no app-wide byte budget: the number of notes is bounded by the watch's own app storage limit, which Garmin varies by device (often around 128 KB). Opus duration depends on firmware encoding.
+- Up to 40 notes. When the watch's storage is full, capture stops, earlier chunks are kept, and the note is labelled partial. Delete uploaded notes to free space.
 - Audio is written in 4 KB chunks. Interrupted recordings are labelled partial.
 - The app only captures in the foreground. The background service only uploads saved recordings.
 - Automatic deferred uploads run while the app is open, retrying with a delay of 30 seconds up to five minutes. After closing the app, a background job requests five-minute intervals. Garmin controls actual scheduling and can terminate jobs to free memory.
 - Background jobs save a progress marker after each acknowledged chunk, work on one note per invocation, and stop starting requests after 20 seconds to respect Garmin's 30-second job limit. An interrupted request is safely repeated later.
 - Networking uses Garmin's normal web-request transport. There is no explicit LTE-session activation or custom phone companion in this version; Wi-Fi/LTE availability must be verified per device.
 - Uploads are serial. Recording and playback wait for an active upload to finish. Notes are never automatically deleted.
-- The receiver is for one owner. It limits each note to 80 KB and total stored files to approximately 1 GB. It retains uploaded chunks to support safe retries; monitor disk use and archive complete note folders as needed.
+- The receiver is for one owner. It limits each note to 512 KB and total stored files to approximately 1 GB. It retains uploaded chunks to support safe retries; monitor disk use and archive complete note folders as needed.
 
 Garmin's firmware may have capture/playback issues. A successful build does not prove working audio on a watch. The receiver keeps the original encoded stream, including any firmware-produced header or duration problems.
 

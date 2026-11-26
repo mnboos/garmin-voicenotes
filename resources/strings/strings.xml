@@ -3,4 +3,6 @@
     <string id="ServerLabel">Server URL (HTTPS)</string>
     <string id="TokenLabel">Server access token</string>
     <string id="AutoLabel">Automatically upload queued notes (also in background)</string>
+    <string id="AutoRecordLabel">Start recording when the app opens</string>
+    <string id="VibrateLabel">Vibrate when recording starts</string>
 </strings>

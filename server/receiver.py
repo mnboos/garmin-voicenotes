@@ -13,7 +13,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 LOG = logging.getLogger("voicenotes")
-MAX_NOTE_BYTES = 80_000
+MAX_NOTE_BYTES = 512_000
 MAX_CHUNKS = 128
 MAX_DISK_BYTES = 1_000_000_000
 NOTE_PATH = re.compile(r"/api/notes/([a-zA-Z0-9-]{1,100})/(chunks/(\d+)|complete)\Z")

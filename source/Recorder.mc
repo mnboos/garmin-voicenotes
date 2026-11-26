@@ -1,3 +1,5 @@
+import Toybox.Application;
+import Toybox.Attention;
 import Toybox.Audio;
 import Toybox.Lang;
 import Toybox.System;
@@ -36,6 +38,7 @@ class Recorder {
             active = true;
             message = "Recording";
             Audio.Capture.start();
+            vibrate();
         } catch (e) {
             active = false;
             finishing = false;
@@ -66,14 +69,14 @@ class Recorder {
         lastData = System.getTimer();
         try {
             if (!store.append(note, data)) {
-                note["state"] = "interrupted";
+                // Per-note size limit reached: keep what was recorded as a normal note.
                 stop();
-                message = "Storage full; partial note";
+                message = "Note size limit; saved";
             }
         } catch (e) {
             note["state"] = "interrupted";
             stop();
-            message = "Save failed; partial note";
+            message = "Storage full; partial note";
         }
         WatchUi.requestUpdate();
     }
@@ -94,6 +97,12 @@ class Recorder {
         if (note != null) { note["state"] = "interrupted"; persistStatus(); }
         message = "Capture error " + error;
         WatchUi.requestUpdate();
+    }
+    function vibrate() {
+        if (Application.Properties.getValue("vibrateOnRecord") != true) { return; }
+        if (Attention has :vibrate) {
+            Attention.vibrate([new Attention.VibeProfile(60, 200)]);
+        }
     }
     function persistStatus() {
         try { store.save(); }

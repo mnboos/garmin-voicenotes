@@ -7,9 +7,13 @@ import Toybox.Time;
 
 // Each chunk is below Storage's 32 KB value limit. The catalogue is small.
 // Persist the chunk before the catalogue so a failed write never references missing audio.
+// There is no app-wide byte budget: the watch's real Storage limit varies by device, and a
+// failed write (StorageFullException) is handled by the recorder as a partial note.
 class Notes {
     var items as Lang.Array<Lang.Dictionary>;
-    const LIMIT = 80000;
+    // Per-note limits, matching the receiver's MAX_NOTE_BYTES and MAX_CHUNKS.
+    const NOTE_LIMIT = 512000;
+    const CHUNK_LIMIT = 128;
     function initialize() {
         var stored = Application.Storage.getValue("notes");
         items = stored == null ? [] : stored as Lang.Array<Lang.Dictionary>;
@@ -29,13 +33,8 @@ class Notes {
         }
     }
     function save() { Application.Storage.setValue("notes", items); }
-    function used() {
-        var size = 0;
-        for (var i = 0; i < items.size(); i++) { size += items[i]["bytes"]; }
-        return size;
-    }
     function create(format as Lang.Dictionary, extension) {
-        if (used() > LIMIT - 8192 || items.size() >= 40) {
+        if (items.size() >= 40) {
             throw new Lang.InvalidValueException("Storage full");
         }
         var seq = Application.Storage.getValue("sequence");
@@ -57,7 +56,7 @@ class Notes {
         return note;
     }
     function append(note as Lang.Dictionary, data as Lang.ByteArray) {
-        if (used() + data.size() > LIMIT) { return false; }
+        if (note["bytes"] + data.size() > NOTE_LIMIT || note["chunks"] >= CHUNK_LIMIT) { return false; }
         var key = note["id"] + ":" + note["chunks"];
         Application.Storage.setValue(key, data);
         note["chunks"] += 1;
