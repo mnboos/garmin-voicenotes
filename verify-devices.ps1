@@ -19,7 +19,7 @@ $manifest.Save((Join-Path $PSScriptRoot '.tools\verification\manifest.xml'))
 @'
 project.manifest = manifest.xml
 '@ | Set-Content .tools\verification\monkey.jungle
-& "$sdk\bin\monkeyc.bat" -f 'monkey.jungle;.tools/verification/monkey.jungle' -y $key -e -o bin\Voicenotes-installed-profiles.iq -w
+& "$sdk\bin\monkeyc.bat" -f '.tools/verification/monkey.jungle;resources.jungle' -y $key -e -o bin\Voicenotes-installed-profiles.iq -w
 if ($LASTEXITCODE -ne 0) { throw 'Device verification failed' }
 Write-Output ('Compiled profiles: ' + $manifest.manifest.application.products.product.Count)
 if ($missing.Count) { Write-Warning 'This verification package is incomplete; do not use it as the full release.' }
