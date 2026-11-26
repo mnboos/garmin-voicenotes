@@ -1,3 +1,21 @@
+# 26.11.3
+
+**Sync**
+
+- Automatically send recordings to up to three receivers configured in Garmin Connect
+- See the sync status of each saved note on the watch
+- Choose **Resync** on a saved note to send it to all configured receivers, even with automatic upload off
+- Keep recordings on the watch after syncing and retry queued uploads when a connection is available
+- Transfer recordings to the compatible Android companion while Voicenotes is open on the watch
+
+**Receiver**
+
+- Email recordings as attachments, save them to a network share, or do both
+
+**Builds**
+
+- Build separate beta and release packages
+
 # 26.11.2
 
 **Recording**

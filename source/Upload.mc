@@ -1,140 +1,144 @@
 import Toybox.Application;
-import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.WatchUi;
 
 class Upload {
     var store as Notes;
-    var current as Lang.Dictionary? = null;
-    var index = 0;
+    var transfer = null;
     var busy = false;
-    var nextAttempt = 0;
-    var failures = 0;
     var message = "";
-    var baseUrl;
-    var token;
+    var retryAt as Lang.Array<Lang.Number> = [0, 0, 0];
+    var nextNote as Lang.Array<Lang.Number> = [0, 0, 0];
+    var connected = false;
+
     function initialize(notes) {
         store = notes;
+        SyncTargets.bindLegacy();
     }
+
     function tick() {
-        if (
-            busy ||
-            System.getTimer() < nextAttempt ||
-            !Application.Properties.getValue("autoUpload")
-        ) {
+        var online = System.getDeviceSettings().connectionAvailable;
+        if (online && !connected) {
+            retryAt = [0, 0, 0];
+        }
+        connected = online;
+        if (busy || !online) {
             return;
         }
-        for (var i = 0; i < store.items.size(); i++) {
-            var item = store.items[i] as Lang.Dictionary;
-            if (!item["uploaded"] && item["bytes"] > 0 && item["state"] != "recording") {
-                start(item);
+        var auto = Application.Properties.getValue("autoUpload");
+        var now = System.getTimer();
+        for (var slot = 0; slot < SyncTargets.COUNT; slot++) {
+            if (now < retryAt[slot]) {
+                continue;
+            }
+            var target = SyncTargets.get(slot);
+            if (target == null) {
+                continue;
+            }
+            for (var scanned = 0; scanned < store.items.size(); scanned++) {
+                var i = (nextNote[slot] + scanned) % store.items.size();
+                var note = store.items[i] as Lang.Dictionary;
+                if (note["bytes"] == 0 || note["state"].equals("recording")) {
+                    continue;
+                }
+                var progress = SyncTargets.progress(note, SyncTargets.read(note), slot, target[0]);
+                if (progress[1] == -1 || (!auto && !progress[2])) {
+                    continue;
+                }
+                nextNote[slot] = i + 1;
+                busy = true;
+                message = "Syncing to target " + (slot + 1);
+                transfer = new SyncTransfer(note, slot, target, progress, null, method(:finished));
+                transfer.send();
                 return;
             }
         }
     }
-    function start(note as Lang.Dictionary) {
-        if (busy) {
-            return;
-        }
-        baseUrl = Application.Properties.getValue("serverUrl");
-        token = Application.Properties.getValue("serverToken");
-        if (
-            baseUrl == null ||
-            baseUrl.length() < 9 ||
-            !baseUrl.substring(0, 8).equals("https://") ||
-            token == null ||
-            token.length() == 0
-        ) {
-            message = "Set HTTPS server and token";
-            nextAttempt = System.getTimer() + 60000;
-            return;
-        }
-        if (baseUrl.substring(baseUrl.length() - 1, baseUrl.length()).equals("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
+
+    function resync(note as Lang.Dictionary) {
         if (note["bytes"] == 0) {
-            message = "No audio to upload";
+            message = "No audio to sync";
             return;
         }
-        current = note;
-        index = 0;
-        busy = true;
-        send();
-    }
-    function send() {
-        message = "Uploading " + index + "/" + current["chunks"];
-        var path = "/api/notes/" + current["id"];
-        var options = {
-            :method => Communications.HTTP_REQUEST_METHOD_PUT,
-            :headers => {
-                "Authorization" => "Bearer " + token,
-                "Content-Type" => "application/octet-stream"
-            },
-            :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON
-        };
-        if (index < current["chunks"]) {
-            var chunk = store.read(current, index);
-            if (chunk == null) {
-                failed("Missing audio chunk");
-                return;
+        var state = SyncTargets.read(note);
+        var count = 0;
+        for (var slot = 0; slot < SyncTargets.COUNT; slot++) {
+            var target = SyncTargets.get(slot);
+            if (target == null) {
+                continue;
             }
-            options[:body] = chunk;
-            path += "/chunks/" + index;
-        } else {
-            options[:method] = Communications.HTTP_REQUEST_METHOD_POST;
-            options[:headers]["Content-Type"] = "application/json";
-            path += "/complete";
+            var previous = state[slot] as Lang.Array?;
+            state[slot] = [target[0], 0, true, previous == null ? 1 : previous[3] + 1];
+            count++;
         }
-        try {
-            Communications.makeWebRequest(
-                baseUrl + path,
-                index == current["chunks"] ? current : null,
-                options,
-                method(:response)
-            );
-        } catch (e) {
-            failed("Upload unavailable; queued");
+        if (count == 0) {
+            message = "Set a sync target";
+            return;
         }
-        WatchUi.requestUpdate();
+        Application.Storage.setValue(SyncTargets.key(note), state);
+        retryAt = [0, 0, 0];
+        message = "Sync queued";
     }
-    function response(code as Lang.Number, data as Communications.ContentType?) as Void {
-        if (!busy) {
-            return;
+
+    function status(note as Lang.Dictionary) {
+        if (note["bytes"] == 0) {
+            return "No audio";
         }
-        if (code != 200 || !(data instanceof Lang.Dictionary) || data["ok"] != true) {
-            failed("Queued; upload error " + code);
-            return;
-        }
-        if (index == current["chunks"]) {
-            current["uploaded"] = true;
-            try {
-                store.save();
-            } catch (e) {
-                current["uploaded"] = false;
-                failed("Uploaded; local save failed");
-                return;
+        var state = SyncTargets.read(note);
+        var total = 0;
+        var synced = 0;
+        var queued = Application.Properties.getValue("autoUpload");
+        for (var slot = 0; slot < SyncTargets.COUNT; slot++) {
+            var target = SyncTargets.get(slot);
+            if (target == null) {
+                continue;
             }
-            busy = false;
-            current = null;
-            failures = 0;
-            message = "Uploaded; kept on watch";
-        } else {
-            index++;
-            send();
+            var progress = SyncTargets.progress(note, state, slot, target[0]);
+            total++;
+            if (progress[1] == -1) {
+                synced++;
+            }
+            queued = queued || progress[2];
         }
-        WatchUi.requestUpdate();
+        if (total == 0 || (synced == 0 && !queued)) {
+            return "On watch";
+        }
+        if (synced == 0) {
+            return "Sync queued";
+        }
+        return "Synced " + synced + "/" + total;
     }
-    function failed(reason) {
+
+    function needsBackground() {
+        if (Application.Properties.getValue("autoUpload")) {
+            return true;
+        }
+        for (var slot = 0; slot < SyncTargets.COUNT; slot++) {
+            var target = SyncTargets.get(slot);
+            if (target == null) {
+                continue;
+            }
+            for (var i = 0; i < store.items.size(); i++) {
+                var note = store.items[i] as Lang.Dictionary;
+                var progress = SyncTargets.progress(note, SyncTargets.read(note), slot, target[0]);
+                if (progress[2]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function finished(error) {
+        if (error == null) {
+            message = "Synced to target " + (transfer.slot + 1);
+        } else {
+            retryAt[transfer.slot] = System.getTimer() + 15000;
+            message = "Queued: " + error;
+        }
+        transfer = null;
         busy = false;
-        current = null;
-        failures++;
-        var delay = failures * 30000;
-        if (delay > 300000) {
-            delay = 300000;
-        }
-        nextAttempt = System.getTimer() + delay;
-        message = reason;
         WatchUi.requestUpdate();
     }
 }

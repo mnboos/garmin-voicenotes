@@ -1,6 +1,10 @@
 <settings>
     <setting propertyKey="@Properties.serverUrl" title="@Strings.ServerLabel"><settingConfig type="alphaNumeric"/></setting>
     <setting propertyKey="@Properties.serverToken" title="@Strings.TokenLabel"><settingConfig type="alphaNumeric"/></setting>
+    <setting propertyKey="@Properties.serverUrl2" title="@Strings.Server2Label"><settingConfig type="alphaNumeric"/></setting>
+    <setting propertyKey="@Properties.serverToken2" title="@Strings.Token2Label"><settingConfig type="alphaNumeric"/></setting>
+    <setting propertyKey="@Properties.serverUrl3" title="@Strings.Server3Label"><settingConfig type="alphaNumeric"/></setting>
+    <setting propertyKey="@Properties.serverToken3" title="@Strings.Token3Label"><settingConfig type="alphaNumeric"/></setting>
     <setting propertyKey="@Properties.autoUpload" title="@Strings.AutoLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.autoRecord" title="@Strings.AutoRecordLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.vibrateOnRecord" title="@Strings.VibrateLabel"><settingConfig type="boolean"/></setting>

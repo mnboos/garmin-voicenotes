@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "format": "prettier --write \"source/**/*.mc\"",
-    "lint": "prettier --check \"source/**/*.mc\""
+    "lint": "prettier --fix --check \"source/**/*.mc\""
   },
   "devDependencies": {
     "@markw65/prettier-plugin-monkeyc": "1.0.70",

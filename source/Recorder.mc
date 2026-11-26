@@ -127,7 +127,7 @@ class Recorder {
         }
         active = false;
         finishing = false;
-        if (note["state"] == "recording") {
+        if ("recording".equals(note["state"])) {
             note["state"] = "saved";
         }
         note["seconds"] = (System.getTimer() - started) / 1000;

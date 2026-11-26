@@ -24,11 +24,16 @@
    ```
 
 5. To sideload, copy `bin/Voicenotes.prg` into the watch's `GARMIN/APPS` folder over USB. Each build replaces this file; use the device selected for that build.
-6. To create `bin/Voicenotes.iq` for all manifest targets, use `just garmin-package` or `just garmin-release`. These commands do not publish the app.
+6. For store builds, copy `.env.template` to `.env` if needed and enter the app IDs for your listings. The recipes load `.env` automatically.
+
+   - `just garmin-release` builds `bin/Voicenotes.iq` using `GARMIN_RELEASE_APP_ID`.
+   - `just garmin-package beta` builds `bin/Voicenotes-beta.iq` using `GARMIN_BETA_APP_ID`.
+
+   Both packages cover all manifest targets. Select the matching listing when you upload the package in Connect IQ.
 
 The app name is exactly **Voicenotes**. Both build scripts validate it.
 
-Direct script equivalents:
+Direct script calls read the app IDs from the environment. Without an override, the release build uses the ID in `manifest.xml`.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Device fr970
@@ -45,7 +50,7 @@ The earlier PowerShell options `-Sdk`, `-Key`, and `-Export` remain accepted ali
 ## Build with private settings
 
 1. Copy `settings.example.json` to `private/settings.json`.
-2. Replace `serverUrl` and `serverToken` with your receiver settings. Set `autoUpload` to `true` or `false`.
+2. Replace `serverUrl` and `serverToken` with your receiver settings. For more receivers, fill in `serverUrl2` and `serverToken2`, or `serverUrl3` and `serverToken3`. Leave unused pairs blank. Set `autoUpload` to `true` or `false`.
 3. Run `just garmin-build-app private/settings.json fr970`, choosing your device.
 
 Private settings are written into a separate resource copy under `private/`. Public resources stay unchanged. The scripts reject combining private settings with store packaging. The `private/` directory and `.env` are ignored by Git. The resulting personal PRG contains your token; keep it private.
@@ -72,12 +77,46 @@ The receiver uses Python 3.11 or newer and only the standard library. It support
    ```
 
 3. Put an HTTPS reverse proxy with a publicly trusted certificate in front of `127.0.0.1:8787`. Configure its hostname and TLS for your server. The watch's URL must be reachable from the phone or the watch's available network.
-4. In Garmin Connect, open Voicenotes settings and enter the HTTPS base URL and the same token.
+4. In Garmin Connect, open Voicenotes settings and enter the HTTPS base URL and matching token for each receiver you use. Clear a target's URL and token to disable it.
+
+With automatic upload enabled, saved notes sync to all configured receivers, including newly added targets. Open **Saved notes**, select a recording, and choose **Resync** to queue it again for all configured receivers. **Delete** removes the local copy after confirmation. Copies already sent to receivers remain there.
 5. Enable **Automatically upload queued notes (also in background)** if wanted.
 6. Record a short note. After reconnecting, leave the app open to retry or let Garmin run the scheduled background job. Background scheduling is approximate; it requests five-minute intervals.
 7. Find the original audio in `data/NOTE_ID/note.ogg` or `note.wav`. `metadata.json` contains the checksum and recording status. Back up this directory.
 
 The receiver preserves source bytes without transcoding. It validates the container signature, byte count, and complete chunk set; it does not prove the recording contains audible speech.
+
+### Copy recordings to a network share
+
+1. Create a folder on your NAS or file server. Give the account running the receiver write access.
+2. Keep `--data` on a local disk and add `--archive` to the receiver command. On Windows, you can use a UNC path.
+
+   ```powershell
+   python server/receiver.py --data data --archive '\\nas\recordings\voicenotes'
+   ```
+
+   On Linux, use the path to the mounted share. Arrange for the share to be mounted before the receiver starts.
+
+3. Sync a recording and look for `NOTE_ID.ogg` or `NOTE_ID.wav` in the archive. If the share is unavailable, the local copy is retained and the watch retries. Resync restores a missing archive file under the same name.
+
+### Email recordings
+
+1. Set these variables in the receiver process environment.
+
+   | Variable | Value |
+   | --- | --- |
+   | `VOICENOTES_EMAIL_FROM` | Sender address accepted by your mail provider |
+   | `VOICENOTES_EMAIL_TO` | One recipient address |
+   | `VOICENOTES_SMTP_HOST` | SMTP relay hostname |
+   | `VOICENOTES_SMTP_TLS` | `starttls` (default) or `implicit` |
+   | `VOICENOTES_SMTP_PORT` | Optional override. Defaults to 587 for STARTTLS or 465 for implicit TLS |
+   | `VOICENOTES_SMTP_USER` | SMTP username, when required |
+   | `VOICENOTES_SMTP_PASSWORD` | SMTP password or app password, when required |
+
+2. Restart the receiver. The Garmin settings stay the same. You can enable both email and the archive.
+3. Sync a recording. The receiver attaches the original audio and keeps pending email in the local data folder across restarts. Check `metadata.json` for `email: pending` or `email: sent`. Sent means the mail relay accepted the message.
+
+The receiver checks for pending email every 30 seconds. Watch resyncs do not resend a recording whose email is already marked sent. An older recording can be queued by resyncing it once after enabling email. SMTP can deliver a duplicate if the relay accepts the message but its acknowledgement is lost or the receiver stops before saving the sent status.
 
 ## Verify changes
 
