@@ -1,4 +1,4 @@
-go<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
   <iq:application id="c20e35b73abb4a6aba44972800e063b0" type="watch-app" name="@Strings.Voicenotes" entry="VoicenotesApp" launcherIcon="@Drawables.LauncherIcon" minApiLevel="6.0.3">
     <iq:products>
       <iq:product id="d2mach2pro" />
