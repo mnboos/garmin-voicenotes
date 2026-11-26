@@ -1,0 +1,15 @@
+---
+title: Voicenotes documentation
+toc: false
+---
+
+Record and play voice notes on a Garmin watch and export them to configured receivers.
+
+## How-to guides
+
+- [Build the watch app and run the export receiver](setup.qmd)
+
+## Reference
+
+- [Compatibility and limits](compatibility.qmd)
+- [Verification results](validation.qmd)

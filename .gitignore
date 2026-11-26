@@ -11,3 +11,5 @@ __pycache__/
 *.debug.xml
 sdk-page.html
 node_modules/
+/docs/.quarto/
+/docs/_site/
