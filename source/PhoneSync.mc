@@ -104,14 +104,19 @@ class PhoneSync {
 
     function block(id, offset) as Lang.Dictionary {
         var note = find(id);
-        if (note == null || !(offset instanceof Lang.Number) || offset < 0 || offset >= note["bytes"]) {
+        if (
+            note == null ||
+            !(offset instanceof Lang.Number) ||
+            offset < 0 ||
+            offset >= note["bytes"]
+        ) {
             return { "op" => "missing", "id" => id };
         }
         var data = bytesAt(note, offset);
         if (data == null) {
             return { "op" => "missing", "id" => id };
         }
-        show("To phone " + (offset * 100 / note["bytes"]) + "%");
+        show("To phone " + (offset * 100) / note["bytes"] + "%");
         return {
             "op" => "block",
             "id" => id,
