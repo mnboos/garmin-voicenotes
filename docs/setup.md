@@ -102,3 +102,19 @@ Before release, test on real hardware:
 - Disable automatic upload and confirm notes remain local until manual upload.
 - Fill storage and confirm previous notes remain intact.
 - Test interruption, empty capture, short capture, and speaker/headphone playback.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The compiled `Voicenotes.iq` is attached to the run for seven days. It is signed with a throwaway key, so don't publish it.
+
+Garmin only serves device profiles to a logged-in account, so the build job needs three repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+| --- | --- |
+| `GARMIN_USERNAME` | Garmin developer account email |
+| `GARMIN_PASSWORD` | Its password. The account must not use two-step verification. |
+| `GARMIN_AGREEMENT_HASH` | Run `connect-iq-sdk-manager agreement view` locally ([install](https://github.com/lindell/connect-iq-sdk-manager-cli)), read the SDK licence and copy the acceptance hash it prints |
+
+When Garmin publishes a new licence, the hash changes and the build fails until you update the secret.
+
+To block merging until CI passes, add a branch ruleset for `main` (Settings → Rules → Rulesets) that requires a pull request and the status checks **Format check**, **Receiver tests** and **Compile watch app**.
