@@ -12,7 +12,7 @@ class Notes {
         items = stored == null ? [] : stored as Lang.Array<Lang.Dictionary>;
         for (var i = 0; i < items.size(); i++) {
             var item = items[i] as Lang.Dictionary;
-            if (item["state"] == "recording") {
+            if ("recording".equals(item["state"])) {
                 item["state"] = "interrupted";
             }
         }
@@ -94,5 +94,6 @@ class Notes {
         Application.Storage.deleteValue(SyncTargets.key(note));
         Application.Storage.deleteValue("sent:" + note["id"]);
         Application.Storage.deleteValue("upload:" + note["id"]);
+        Application.Storage.deleteValue(PhoneSync.deliveredKey(note));
     }
 }

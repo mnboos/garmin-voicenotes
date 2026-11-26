@@ -15,7 +15,8 @@ The release manifest includes 29 Garmin product IDs. The D2 Mach 2 is excluded b
 - The app only captures in the foreground. The background service only uploads saved recordings.
 - The app checks connectivity once per second on the home screen. Failed targets wait 15 seconds before retrying. A detected reconnection clears that wait. After closing the app, a pending manual resync or enabled automatic upload uses Garmin's five-minute background schedule.
 - Foreground and background sync save progress for each receiver after every acknowledged chunk. Background jobs stop starting requests after 20 seconds to respect Garmin's 30-second limit. An interrupted request is safely repeated later.
-- Networking uses Garmin's normal web-request transport. There is no explicit LTE-session activation or custom phone companion in this version; Wi-Fi/LTE availability must be verified per device.
+- Networking uses Garmin's normal web-request transport. There is no explicit LTE-session activation in this version; Wi-Fi/LTE availability must be verified per device.
+- The Voicenotes Companion Android app pulls recordings over Connect IQ phone messages while the watch app is open (`source/PhoneSync.mc`). A recording the phone confirmed is marked "On phone" and is not offered again.
 - Uploads are serial. Recording and playback wait for an active upload to finish. Notes are never automatically deleted.
 - The receiver is for one owner. It accepts notes up to 40 MB and 10,000 chunks and total stored files to approximately 1 GB. It retains uploaded chunks to support safe retries; monitor disk use and archive complete note folders as needed.
 

@@ -15,6 +15,7 @@ class VoicenotesApp extends Application.AppBase {
     var notes as Notes? = null;
     var recorder as Recorder? = null;
     var upload as Upload? = null;
+    var phone as PhoneSync? = null;
     var timer;
     var player = null;
     var browsingNotes = false;
@@ -27,6 +28,7 @@ class VoicenotesApp extends Application.AppBase {
         notes = new Notes();
         recorder = new Recorder(notes);
         upload = new Upload(notes);
+        phone = new PhoneSync(notes, upload);
         timer = new Timer.Timer();
         timer.start(method(:tick), 1000, true);
         autoStartPending = Application.Properties.getValue("autoRecord") == true;
@@ -197,10 +199,14 @@ class VoicenotesApp extends Application.AppBase {
         );
     }
     function noteStatus(n as Lang.Dictionary) as Lang.String {
-        if (n["state"] == "interrupted" && n["bytes"] > 0) {
-            return "Partial / " + upload.status(n);
+        var status = upload.status(n);
+        if (status.equals("On watch") && PhoneSync.delivered(n)) {
+            status = "On phone";
         }
-        return upload.status(n);
+        if (n["state"] == "interrupted" && n["bytes"] > 0) {
+            return "Partial / " + status;
+        }
+        return status;
     }
     // depth: views to pop, including the confirmation
     function confirmDelete(note as Lang.Dictionary, list as WatchUi.Menu2, depth as Lang.Number) {
