@@ -7,25 +7,39 @@ import Toybox.StringUtil;
 (:background, :companion)
 module PhoneSync {
     const BLOCK_BYTES = 768;
+    const MAX_NOTE_BYTES = 80000;
 
-    function reply(request as Lang.Dictionary) as Lang.Dictionary or Null {
-        if (request["v"] != 1 || !(request["rid"] instanceof Lang.String)) { return null; }
+    function reply(request as Lang.Dictionary) as Lang.Dictionary? {
+        if (request["v"] != 1 || !(request["rid"] instanceof Lang.String)) {
+            return null;
+        }
         var op = request["op"];
         var next = "next".equals(op);
-        var response = {"v"=>1, "rid"=>request["rid"], "op"=>next ? "empty" : "error"};
+        var response = { "v" => 1, "rid" => request["rid"], "op" => next ? "empty" : "error" };
         if ("ping".equals(op)) {
             response["op"] = "pong";
             return response;
         }
 
-        var items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary> or Null;
-        if (items == null) { return response; }
+        var items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary>?;
+        if (items == null) {
+            return response;
+        }
         for (var i = 0; i < items.size(); i++) {
             var note = items[i] as Lang.Dictionary;
-            if ("deleting".equals(note["state"]) || "recording".equals(note["state"]) || note["bytes"] <= 0) { continue; }
+            if (
+                "deleting".equals(note["state"]) ||
+                "recording".equals(note["state"]) ||
+                note["bytes"] <= 0 ||
+                note["bytes"] > MAX_NOTE_BYTES
+            ) {
+                continue;
+            }
             var id = note["id"];
             if (next) {
-                if (Application.Storage.getValue("phone:" + id) == true) { continue; }
+                if (Application.Storage.getValue("phone:" + id) == true) {
+                    continue;
+                }
                 response["op"] = "offer";
                 response["id"] = id;
                 response["bytes"] = note["bytes"];
@@ -33,7 +47,9 @@ module PhoneSync {
                 response["created"] = note["created"];
                 return response;
             }
-            if (!id.equals(request["id"])) { continue; }
+            if (!id.equals(request["id"])) {
+                continue;
+            }
             if ("read".equals(op) && request["offset"] instanceof Lang.Number) {
                 var block = readBlock(note, request["offset"] as Lang.Number);
                 if (block != null) {
@@ -53,16 +69,23 @@ module PhoneSync {
     }
 
     function readBlock(note as Lang.Dictionary, offset as Lang.Number) {
-        if (offset < 0 || offset >= note["bytes"]) { return null; }
+        if (offset < 0 || offset >= note["bytes"]) {
+            return null;
+        }
         for (var i = 0; i < note["chunks"]; i++) {
             var data = Application.Storage.getValue(note["id"] + ":" + i);
-            if (!(data instanceof Lang.ByteArray)) { return null; }
+            if (!(data instanceof Lang.ByteArray)) {
+                return null;
+            }
             if (offset < data.size()) {
                 var end = offset + BLOCK_BYTES;
-                if (end > data.size()) { end = data.size(); }
-                return StringUtil.convertEncodedString(data.slice(offset, end),
-                    {:fromRepresentation=>StringUtil.REPRESENTATION_BYTE_ARRAY,
-                     :toRepresentation=>StringUtil.REPRESENTATION_STRING_BASE64});
+                if (end > data.size()) {
+                    end = data.size();
+                }
+                return StringUtil.convertEncodedString(data.slice(offset, end), {
+                    :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
+                    :toRepresentation => StringUtil.REPRESENTATION_STRING_BASE64
+                });
             }
             offset -= data.size();
         }
@@ -78,7 +101,9 @@ class PhoneReply extends Communications.ConnectionListener {
         service = background;
     }
     function onComplete() as Void {
-        if (service) { Background.exit(null); }
+        if (service) {
+            Background.exit(null);
+        }
     }
     function onError() as Void {
         onComplete();

@@ -10,7 +10,7 @@ class DemoFixture {
         var header = [82,73,70,70,36,125,0,0,87,65,86,69,102,109,116,32,16,0,0,0,
             1,0,1,0,64,31,0,0,128,62,0,0,2,0,16,0,100,97,116,97,0,125,0,0]b;
         try {
-            if (!store.append(note, header)) { throw new Lang.InvalidValueException("Storage full"); }
+            store.append(note, header);
             var low = tone(20);
             var high = tone(16);
             var silence = new [160]b;
@@ -20,7 +20,7 @@ class DemoFixture {
                 for (var i = start; i < start + 2000; i += 80) {
                     pcm.addAll(i % 4000 < 3200 ? pitch : silence);
                 }
-                if (!store.append(note, pcm)) { throw new Lang.InvalidValueException("Storage full"); }
+                store.append(note, pcm);
             }
             note["seconds"] = 2;
             note["state"] = "saved";

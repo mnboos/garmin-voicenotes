@@ -1,0 +1,12 @@
+{
+  "name": "voicenotes",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write \"src/**/*.mc\"",
+    "lint": "prettier --check \"src/**/*.mc\""
+  },
+  "devDependencies": {
+    "@markw65/prettier-plugin-monkeyc": "1.0.70",
+    "prettier": "3.10.1"
+  }
+}

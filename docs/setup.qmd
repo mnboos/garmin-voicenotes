@@ -85,6 +85,14 @@ To run an automation after a note is saved, see [Get notified in Home Assistant]
 
 ## Verify changes
 
+Format the watch source with Prettier and its Monkey C plugin (Node.js needed; run `npm install` once):
+
+```bash
+just format   # rewrite src/*.mc
+just lint     # check only
+```
+
+
 ```powershell
 python -m unittest discover -s server -v
 ```
@@ -98,3 +106,14 @@ Before release, test on real hardware:
 - Disable automatic upload and confirm notes remain local until manual upload.
 - Fill storage and confirm previous notes remain intact.
 - Test interruption, empty capture, short capture, and speaker/headphone playback.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The build is only a check; nothing is uploaded.
+
+The build job needs no secrets. It runs `build.sh --package` inside `ghcr.io/blackshadev/garmin-connectiq-tools`, the image behind the [Garmin ConnectIQ Build](https://github.com/marketplace/actions/garmin-connectiq-build) action, which already contains the Connect IQ SDK and device profiles. The workflow pins the image by digest. To move to a newer SDK, take the digest of a newer tag and update `CONNECTIQ_IMAGE` in `.github/workflows/ci.yml`.
+
+- The image is maintained by a third party, not Garmin. Garmin's SDK licence forbids hosting SDK files on other servers, so the image may be taken down. If it disappears, CI fails at the compile step.
+- If the image lacks a profile for a device in `manifest.xml`, compilation fails for that device.
+
+To block merging until CI passes, add a branch ruleset for `main` (Settings → Rules → Rulesets) that requires a pull request and the status checks **Format check**, **Receiver tests** and **Compile watch app**.

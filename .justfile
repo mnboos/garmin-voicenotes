@@ -124,3 +124,13 @@ test-simulator-background serial="":
 [macos]
 android-emulator avd="Medium_Phone_API_37.0":
     "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}/emulator/emulator" -avd {{ quote(avd) }}
+
+[doc("Format the Monkey C source with Prettier. Run `npm install` once first.")]
+[group('lint')]
+format:
+    npm run format
+
+[doc("Check Monkey C formatting without changing files.")]
+[group('lint')]
+lint:
+    npm run lint

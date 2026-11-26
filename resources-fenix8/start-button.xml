@@ -1,0 +1,5 @@
+<resources>
+    <!-- One value: START button angle in degrees, counter-clockwise from 3 o'clock.
+         fenix 8 START (upper right, red ring) sits at about 2 o'clock. -->
+    <jsonData id="StartButton">[30]</jsonData>
+</resources>

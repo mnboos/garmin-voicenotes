@@ -13,3 +13,4 @@ __pycache__/
 sdk-page.html
 /docs/.quarto/
 /docs/_site/
+node_modules/

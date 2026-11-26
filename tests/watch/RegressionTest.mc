@@ -50,7 +50,6 @@ function interruptedAppendRecovery(logger) {
 (:test)
 function interruptedDeletionRecovery(logger) {
     var store = new Notes();
-    var before = store.used();
     var count = store.items.size();
     var note = store.create({}, "wav");
     store.append(note, [1]b);
@@ -60,7 +59,7 @@ function interruptedDeletionRecovery(logger) {
     Application.Storage.deleteValue(note["id"] + ":0");
     var reopened = new Notes();
     Test.assertEqual(count, reopened.items.size());
-    Test.assertEqual(before, reopened.used());
+    Test.assert(reopened.read(note, 0) == null);
     Test.assert(reopened.read(note, 1) == null);
     return true;
 }

@@ -4,6 +4,8 @@ title: "Voicenotes Android beta"
 
 The companion syncs saved recordings from a fēnix 8 paired in Garmin Connect. When the inbox is open, it checks the selected watch automatically. Use **Sync now** on the phone or watch to start a check immediately. Keep Voicenotes open on the watch for the first sync.
 
+The Android inbox accepts recordings up to 80,000 bytes. Larger recordings stay available on the watch for playback and HTTPS upload.
+
 The phone saves recordings locally for playback and sharing. The watch shows **On phone** after it receives confirmation that the phone saved the complete file. The original stays on the watch. The beta remembers which recordings it transferred through those watch receipts, so keep an exported copy before uninstalling or clearing the phone app if you need to retain its inbox.
 
 ## Install the beta
