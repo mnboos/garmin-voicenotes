@@ -16,16 +16,7 @@ class Notes {
                 item["state"] = "interrupted";
             }
         }
-        refreshUploads();
         save();
-    }
-    function refreshUploads() {
-        for (var i = 0; i < items.size(); i++) {
-            var item = items[i] as Lang.Dictionary;
-            if (Application.Storage.getValue("sent:" + item["id"]) == true) {
-                item["uploaded"] = true;
-            }
-        }
     }
     function save() {
         Application.Storage.setValue("notes", items);
@@ -53,7 +44,6 @@ class Notes {
             "bytes" => 0,
             "seconds" => 0,
             "state" => "recording",
-            "uploaded" => false,
             "extension" => extension,
             "format" => [
                 format[:containerFormat],
@@ -88,11 +78,20 @@ class Notes {
         return { :containerFormat => f[0], :codec => f[1], :frequency => f[2], :channels => f[3] };
     }
     function remove(note as Lang.Dictionary) {
+        // Keep the note intact if the catalogue write fails.
+        var previous = items;
+        items = items.slice(0, items.size());
+        items.remove(note);
+        try {
+            save();
+        } catch (e) {
+            items = previous;
+            throw e;
+        }
         for (var i = 0; i < note["chunks"]; i++) {
             Application.Storage.deleteValue(note["id"] + ":" + i);
         }
-        items.remove(note);
-        save();
+        Application.Storage.deleteValue(SyncTargets.key(note));
         Application.Storage.deleteValue("sent:" + note["id"]);
         Application.Storage.deleteValue("upload:" + note["id"]);
     }

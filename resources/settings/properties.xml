@@ -1,6 +1,10 @@
 <properties>
     <property id="serverUrl" type="string"></property>
     <property id="serverToken" type="string"></property>
+    <property id="serverUrl2" type="string"></property>
+    <property id="serverToken2" type="string"></property>
+    <property id="serverUrl3" type="string"></property>
+    <property id="serverToken3" type="string"></property>
     <property id="autoUpload" type="boolean">false</property>
     <property id="autoRecord" type="boolean">false</property>
     <property id="vibrateOnRecord" type="boolean">false</property>
