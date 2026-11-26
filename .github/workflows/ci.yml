@@ -76,7 +76,7 @@ jobs:
             echo "::error::Set GARMIN_USERNAME, GARMIN_PASSWORD and GARMIN_AGREEMENT_HASH secrets (see docs/setup.md)."
             exit 1
           fi
-          connect-iq-sdk-manager agreement accept --acceptance-hash="$GARMIN_AGREEMENT_HASH" >/dev/null
+          connect-iq-sdk-manager agreement accept --agreement-hash="$GARMIN_AGREEMENT_HASH" >/dev/null
           connect-iq-sdk-manager login >/dev/null
           connect-iq-sdk-manager sdk set "$SDK_VERSION"
           connect-iq-sdk-manager device download --manifest=manifest.xml
