@@ -107,33 +107,14 @@ Before release, test on real hardware:
 
 `.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The compiled `Voicenotes.iq` is attached to the run for seven days. It is signed with a throwaway key, so don't publish it.
 
-Garmin only serves device profiles to a logged-in account, so the build takes them from a private repository you upload them to.
+Garmin only serves device profiles to a logged-in account, so the build job needs three repository secrets (Settings → Secrets and variables → Actions):
 
-### Upload your device profiles
+| Secret | Value |
+| --- | --- |
+| `GARMIN_USERNAME` | Garmin developer account email |
+| `GARMIN_PASSWORD` | Its password. Two-step verification on the account will probably block the non-interactive login. |
+| `GARMIN_AGREEMENT_HASH` | Run `connect-iq-sdk-manager agreement view` locally ([install](https://github.com/lindell/connect-iq-sdk-manager-cli)), read the SDK licence and copy the acceptance hash it prints |
 
-1. Create a **private** GitHub repository, for example `connectiq-devices`. Garmin's SDK licence doesn't allow redistributing the profiles, so never make it public.
-2. Copy the profile folders for the devices in `manifest.xml` into a `Devices/` folder in it. Locally they are in `%APPDATA%\Garmin\ConnectIQ\Devices` on Windows, `~/Library/Application Support/Garmin/ConnectIQ/Devices` on macOS and `~/.Garmin/ConnectIQ/Devices` on Linux. From this folder, on Windows:
-
-   ```powershell
-   $dest = "..\connectiq-devices\Devices"; New-Item -ItemType Directory -Force $dest | Out-Null
-   ([xml](Get-Content manifest.xml)).manifest.application.products.product.id |
-       ForEach-Object { Copy-Item -Recurse -Force "$env:APPDATA\Garmin\ConnectIQ\Devices\$_" $dest }
-   ```
-
-   Commit and push. Repeat when you add devices to the manifest or update profiles in SDK Manager.
-3. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with access to only that repository and the **Contents: Read-only** permission.
-
-### Configure this repository
-
-Under Settings → Secrets and variables → Actions:
-
-| Name | Kind | Value |
-| --- | --- | --- |
-| `DEVICES_REPO` | Variable | `owner/connectiq-devices` |
-| `DEVICES_TOKEN` | Secret | The token from step 3 |
-| `GARMIN_AGREEMENT_HASH` | Secret | Run `connect-iq-sdk-manager agreement view` locally ([install](https://github.com/lindell/connect-iq-sdk-manager-cli)), read the SDK licence and copy the acceptance hash it prints |
-| `GARMIN_USERNAME`, `GARMIN_PASSWORD` | Secrets, optional | Only needed if Garmin requires a login to download the SDK itself |
-
-When Garmin publishes a new licence, the hash changes and the build fails until you update the secret. Workflows triggered from forks don't receive secrets, so their builds fail.
+When Garmin publishes a new licence, the hash changes and the build fails until you update the secret.
 
 To block merging until CI passes, add a branch ruleset for `main` (Settings → Rules → Rulesets) that requires a pull request and the status checks **Format check**, **Receiver tests** and **Compile watch app**.
