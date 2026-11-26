@@ -5,10 +5,6 @@ import Toybox.Math;
 import Toybox.System;
 import Toybox.Time;
 
-// Each chunk is below Storage's 32 KB value limit. The catalogue is small.
-// Persist the chunk before the catalogue so a failed write never references missing audio.
-// There is no byte budget: notes are limited by duration (Recorder), and the watch's real
-// Storage limit varies by device. A failed write (StorageFullException) ends the note as partial.
 class Notes {
     var items as Lang.Array<Lang.Dictionary>;
     function initialize() {
@@ -72,7 +68,6 @@ class Notes {
         return {:containerFormat=>f[0], :codec=>f[1], :frequency=>f[2], :channels=>f[3]};
     }
     function remove(note as Lang.Dictionary) {
-        // Remove chunks first; deletion is explicit and confirmed in the UI.
         for (var i = 0; i < note["chunks"]; i++) {
             Application.Storage.deleteValue(note["id"] + ":" + i);
         }

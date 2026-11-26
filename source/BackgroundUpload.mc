@@ -5,8 +5,6 @@ import Toybox.Lang;
 import Toybox.System;
 import Toybox.Time;
 
-// Background jobs have a 30-second lifetime. Save progress after every ACK.
-// Separate upload keys avoid rewriting the foreground recording catalogue.
 (:background)
 class BackgroundUpload extends System.ServiceDelegate {
     var note as Lang.Dictionary or Null = null;
@@ -33,7 +31,6 @@ class BackgroundUpload extends System.ServiceDelegate {
             if (candidate["bytes"] > 0 && !candidate["uploaded"] &&
                 Application.Storage.getValue("sent:" + candidate["id"]) != true) {
                 note = candidate;
-                // A terminated recording still has recoverable saved chunks.
                 if (note["state"] == "recording") { note["state"] = "interrupted"; }
                 var cursor = Application.Storage.getValue("upload:" + note["id"]);
                 index = cursor == null ? 0 : cursor as Lang.Number;
@@ -66,7 +63,6 @@ class BackgroundUpload extends System.ServiceDelegate {
     }
     function response(code as Lang.Number, data as Communications.ContentType or Null) as Void {
         if (code != 200 || !(data instanceof Lang.Dictionary) || data["ok"] != true) {
-            // Server data may have been restored or removed: replay safely next time.
             if (code == 409) { Application.Storage.deleteValue("upload:" + note["id"]); }
             Background.exit(null); return;
         }

@@ -4,8 +4,6 @@ import Toybox.Lang;
 import Toybox.System;
 import Toybox.WatchUi;
 
-// One request at a time. Retrying starts at chunk zero; server writes are idempotent.
-// The uploaded flag changes only after the server confirms final assembly.
 class Upload {
     var store as Notes;
     var current as Lang.Dictionary or Null = null;

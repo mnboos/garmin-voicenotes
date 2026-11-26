@@ -66,7 +66,6 @@ class VoicenotesApp extends Application.AppBase {
         }
         WatchUi.requestUpdate();
     }
-    // Runs once when the home view first appears, if auto-record is enabled.
     function autoStart() {
         if (!autoStartPending) { return; }
         autoStartPending = false;
@@ -83,7 +82,6 @@ class VoicenotesApp extends Application.AppBase {
             Application.Properties.getValue("warnBeforeEnd") != false, null));
         WatchUi.pushView(menu, new SettingsDelegate(self), WatchUi.SLIDE_UP);
     }
-    // Choices offered on the watch; Garmin Connect offers the same list (settings.xml).
     const LENGTHS = [10, 30, 60, 120, 300, 600, 1800, 0];
     function maxSeconds() as Lang.Number {
         var value = Application.Properties.getValue("maxSeconds");
@@ -114,7 +112,6 @@ class VoicenotesApp extends Application.AppBase {
             menu.addItem(new WatchUi.MenuItem(noteTitle(n), noteStatus(n) + " · " + n["seconds"] + "s", n["id"], null));
         }
         if (notes.items.size() == 0) { menu.addItem(new WatchUi.MenuItem("No notes yet", null, "empty", null)); }
-        // Last item; Menu2 wraps, so it is one UP press from the top.
         menu.addItem(new WatchUi.MenuItem("Settings", "Recording options", "settings", null));
         WatchUi.pushView(menu, new NotesDelegate(self, menu), WatchUi.SLIDE_UP);
     }
@@ -126,8 +123,7 @@ class VoicenotesApp extends Application.AppBase {
         if (n["state"] == "interrupted") { return "Partial / interrupted"; }
         return n["uploaded"] ? "Uploaded" : "On watch";
     }
-    // Asks before deleting. `depth` is how many views sit above the notes list,
-    // counting the confirmation itself, so the list is shown again afterwards.
+    // depth: views to pop, including the confirmation
     function confirmDelete(note as Lang.Dictionary, list as WatchUi.Menu2, depth as Lang.Number) {
         if (upload.busy || recorder.active) { return; }
         if (player != null) { Audio.Output.stop(); player = null; }
@@ -183,10 +179,8 @@ class HomeView extends WatchUi.View {
     function drawButtonHint(dc) {
         var centerX = dc.getWidth() / 2.0;
         var centerY = dc.getHeight() / 2.0;
-        // Angle of the START button, counter-clockwise from 3 o'clock, in radians.
         var angle;
         if (startButton.size() == 1) {
-            // Per-device angle in degrees, e.g. resources-fenix8/start-button.xml.
             angle = startButton[0].toFloat() * Math.PI / 180.0;
         } else {
             var buttonX;
@@ -278,7 +272,6 @@ class NotesDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 
-// One note. Tap or START plays/stops, swipe left deletes, MENU/DOWN/swipe up opens actions.
 class NoteView extends WatchUi.View {
     var app as VoicenotesApp;
     var note as Lang.Dictionary;
@@ -365,7 +358,6 @@ class DeleteDelegate extends WatchUi.Menu2InputDelegate {
             var index = list.findItemById(note["id"]);
             if (index >= 0) { list.deleteItem(index); }
         } catch (e) { app.recorder.message = "Delete failed"; }
-        // Back to the (updated) notes list, ready for the next note.
         for (var i = 0; i < depth; i++) { WatchUi.popView(WatchUi.SLIDE_DOWN); }
     }
 }

@@ -13,8 +13,8 @@ class Recorder {
     var started = 0;
     var lastData = 0;
     var message = "Ready to record";
-    var limit = 0;      // maximum seconds for this recording; 0 = no limit
-    var warnAt = -1;    // elapsed seconds at which to warn; -1 = no warning
+    var limit = 0;      // 0 = no limit
+    var warnAt = -1;    // -1 = none
     var warned = false;
     function initialize(notes) { store = notes; }
     function start() {
@@ -71,7 +71,6 @@ class Recorder {
             message = "Time limit; saving...";
             return;
         }
-        // Do not leave a stalled firmware capture looking like a working recorder.
         if (System.getTimer() - lastData > 15000) {
             stop();
             if (active) { onError(Audio.Capture.CAPTURE_ERR_INTERNAL); }
@@ -108,14 +107,12 @@ class Recorder {
         message = "Capture error " + error;
         WatchUi.requestUpdate();
     }
-    // Settings are read when a recording starts, so changes apply to the next note.
     function readLimit() {
         var value = Application.Properties.getValue("maxSeconds");
         limit = value instanceof Lang.Number && value > 0 ? value : 0;
         warned = false;
         warnAt = -1;
         if (limit > 0 && Application.Properties.getValue("warnBeforeEnd") != false) {
-            // Warn 10 s before the end, or at two thirds of very short limits.
             var lead = limit / 3 < 10 ? limit / 3 : 10;
             if (lead > 0) { warnAt = limit - lead; }
         }
