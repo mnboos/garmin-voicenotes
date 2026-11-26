@@ -582,10 +582,10 @@ class ActionsDelegate extends WatchUi.Menu2InputDelegate {
     }
 }
 class DeleteDelegate extends WatchUi.Menu2InputDelegate {
-    var app;
-    var note;
-    var list;
-    var depth;
+    var app as VoicenotesApp;
+    var note as Lang.Dictionary;
+    var list as WatchUi.Menu2;
+    var depth as Lang.Number;
     function initialize(owner, selected, menu, count) {
         Menu2InputDelegate.initialize();
         app = owner;
