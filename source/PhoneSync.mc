@@ -8,6 +8,7 @@ import Toybox.WatchUi;
 class PhoneSync {
     // The phone app accepts at most 768 bytes per block.
     const BLOCK_BYTES = 768;
+    const BINARY_BLOCK_BYTES = 4096;
     const VERSION = 1;
 
     var store as Notes;
@@ -69,7 +70,7 @@ class PhoneSync {
             } else if (op.equals("next")) {
                 reply = offer();
             } else if (op.equals("read")) {
-                reply = block(request["id"], request["offset"]);
+                reply = block(request["id"], request["offset"], request["binary"] == true);
             } else if (op.equals("saved")) {
                 reply = confirm(request["id"], request["bytes"]);
             }
@@ -88,7 +89,12 @@ class PhoneSync {
     function offer() as Lang.Dictionary {
         for (var i = 0; i < store.items.size(); i++) {
             var note = store.items[i] as Lang.Dictionary;
-            if (note["bytes"] == 0 || note["state"].equals("recording") || delivered(note)) {
+            if (
+                note["state"].equals("draft") ||
+                note["bytes"] == 0 ||
+                note["state"].equals("recording") ||
+                delivered(note)
+            ) {
                 continue;
             }
             return {
@@ -102,7 +108,7 @@ class PhoneSync {
         return { "op" => "empty" };
     }
 
-    function block(id, offset) as Lang.Dictionary {
+    function block(id, offset, binary as Lang.Boolean) as Lang.Dictionary {
         var note = find(id);
         if (
             note == null ||
@@ -112,7 +118,7 @@ class PhoneSync {
         ) {
             return { "op" => "missing", "id" => id };
         }
-        var data = bytesAt(note, offset);
+        var data = bytesAt(note, offset, binary ? BINARY_BLOCK_BYTES : BLOCK_BYTES);
         if (data == null) {
             return { "op" => "missing", "id" => id };
         }
@@ -121,7 +127,7 @@ class PhoneSync {
             "op" => "block",
             "id" => id,
             "offset" => offset,
-            "data" => StringUtil.convertEncodedString(data, {
+            "data" => binary ? data : StringUtil.convertEncodedString(data, {
                 :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
                 :toRepresentation => StringUtil.REPRESENTATION_STRING_BASE64
             })
@@ -141,7 +147,7 @@ class PhoneSync {
         return { "op" => "confirmed", "id" => id };
     }
 
-    function bytesAt(note as Lang.Dictionary, offset as Lang.Number) as Lang.ByteArray? {
+    function bytesAt(note as Lang.Dictionary, offset as Lang.Number, limit as Lang.Number) as Lang.ByteArray? {
         if (!note["id"].equals(cursorId) || offset < cursorStart) {
             cursorId = note["id"];
             cursorChunk = 0;
@@ -160,7 +166,7 @@ class PhoneSync {
             var data = cursorData as Lang.ByteArray;
             if (offset < cursorStart + data.size()) {
                 var from = offset - cursorStart;
-                var to = from + BLOCK_BYTES < data.size() ? from + BLOCK_BYTES : data.size();
+                var to = from + limit < data.size() ? from + limit : data.size();
                 return data.slice(from, to);
             }
             cursorStart += data.size();
@@ -177,7 +183,7 @@ class PhoneSync {
         }
         for (var i = 0; i < store.items.size(); i++) {
             var note = store.items[i] as Lang.Dictionary;
-            if (id.equals(note["id"])) {
+            if (id.equals(note["id"]) && !note["state"].equals("draft")) {
                 return note;
             }
         }

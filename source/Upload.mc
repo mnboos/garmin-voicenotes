@@ -39,7 +39,11 @@ class Upload {
             for (var scanned = 0; scanned < store.items.size(); scanned++) {
                 var i = (nextNote[slot] + scanned) % store.items.size();
                 var note = store.items[i] as Lang.Dictionary;
-                if (note["bytes"] == 0 || note["state"].equals("recording")) {
+                if (
+                    note["state"].equals("draft") ||
+                    note["bytes"] == 0 ||
+                    note["state"].equals("recording")
+                ) {
                     continue;
                 }
                 var progress = SyncTargets.progress(note, SyncTargets.read(note), slot, target[0]);
@@ -57,7 +61,7 @@ class Upload {
     }
 
     function resync(note as Lang.Dictionary) {
-        if (note["bytes"] == 0) {
+        if (note["state"].equals("draft") || note["bytes"] == 0) {
             message = "No audio to sync";
             return;
         }

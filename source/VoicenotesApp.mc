@@ -36,7 +36,13 @@ class VoicenotesApp extends Application.AppBase {
     }
     function tick() as Void {
         recorder.tick();
-        if (!recorder.active && player == null && !browsingNotes) {
+        if (
+            !recorder.active &&
+            recorder.startTimer == null &&
+            !recorder.awaitingDecision &&
+            player == null &&
+            !browsingNotes
+        ) {
             upload.tick();
         }
         WatchUi.requestUpdate();
@@ -46,7 +52,7 @@ class VoicenotesApp extends Application.AppBase {
             return;
         }
         timer.stop();
-        recorder.stop();
+        recorder.shutdown();
         Audio.Output.stop();
         if (upload.needsBackground()) {
             Background.registerForTemporalEvent(new Time.Duration(300));
@@ -103,15 +109,11 @@ class VoicenotesApp extends Application.AppBase {
                 null
             )
         );
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Vibrate",
-                "When recording starts",
-                "vibrateOnRecord",
-                Application.Properties.getValue("vibrateOnRecord") == true,
-                null
-            )
-        );
+        addSettingToggle(menu, "Vibrate at start", "vibrateOnRecord", false);
+        addSettingToggle(menu, "Vibrate at end", "vibrateOnStop", false);
+        addSettingToggle(menu, "Sound at start", "soundOnStart", false);
+        addSettingToggle(menu, "Sound at end", "soundOnStop", false);
+        addSettingToggle(menu, "Auto-save", "autoSave", true);
         menu.addItem(
             new WatchUi.MenuItem("Max length", lengthLabel(maxSeconds()), "maxSeconds", null)
         );
@@ -125,6 +127,18 @@ class VoicenotesApp extends Application.AppBase {
             )
         );
         WatchUi.pushView(menu, new SettingsDelegate(self), WatchUi.SLIDE_UP);
+    }
+    function addSettingToggle(menu, label, key, enabledByDefault) {
+        var value = Application.Properties.getValue(key);
+        menu.addItem(
+            new WatchUi.ToggleMenuItem(
+                label,
+                null,
+                key,
+                enabledByDefault ? value != false : value == true,
+                null
+            )
+        );
     }
     const LENGTHS = [10, 30, 60, 120, 300, 600, 1800, 0];
     function maxSeconds() as Lang.Number {
@@ -156,7 +170,9 @@ class VoicenotesApp extends Application.AppBase {
             player = null;
             return;
         }
-        if (recorder.active) {
+        if (recorder.awaitingDecision) {
+            recorder.resolveDraft(true);
+        } else if (recorder.active || recorder.startTimer != null) {
             recorder.stop();
         } else if (!upload.busy) {
             upload.message = "";
@@ -164,7 +180,13 @@ class VoicenotesApp extends Application.AppBase {
         }
     }
     function showNotes() {
-        if (recorder.active || upload.busy || player != null) {
+        if (
+            recorder.active ||
+            recorder.startTimer != null ||
+            recorder.awaitingDecision ||
+            upload.busy ||
+            player != null
+        ) {
             return;
         }
         var menu = new WatchUi.Menu2({ :title => "Saved notes" });
@@ -247,6 +269,33 @@ class HomeView extends WatchUi.View {
             "Voicenotes",
             Graphics.TEXT_JUSTIFY_CENTER
         );
+        if (app.recorder.awaitingDecision) {
+            dc.drawText(
+                w / 2,
+                h * 0.32,
+                Graphics.FONT_XTINY,
+                app.recorder.message,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(
+                w / 2,
+                h * 0.48,
+                Graphics.FONT_SMALL,
+                "Start: Save",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_TRANSPARENT);
+            dc.drawText(
+                w / 2,
+                h * 0.66,
+                Graphics.FONT_SMALL,
+                "Back: Delete",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            drawButtonHint(dc);
+            return;
+        }
         dc.setColor(
             app.recorder.active ? Graphics.COLOR_RED : Graphics.COLOR_LT_GRAY,
             Graphics.COLOR_BLACK
@@ -275,12 +324,19 @@ class HomeView extends WatchUi.View {
         }
         dc.drawText(w / 2, h * 0.59, Graphics.FONT_SMALL, status, Graphics.TEXT_JUSTIFY_CENTER);
         var msg =
-            !app.recorder.active && app.upload.message.length() > 0
+            !app.recorder.active &&
+            app.recorder.startTimer == null &&
+            app.upload.message.length() > 0
                 ? app.upload.message
                 : app.recorder.message;
         dc.drawText(w / 2, h * 0.7, Graphics.FONT_XTINY, msg, Graphics.TEXT_JUSTIFY_CENTER);
         drawButtonHint(dc);
-        if (!app.recorder.active && app.player == null && !app.upload.busy) {
+        if (
+            !app.recorder.active &&
+            app.recorder.startTimer == null &&
+            app.player == null &&
+            !app.upload.busy
+        ) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
             dc.setPenWidth(2);
             for (var row = 0; row < 3; row++) {
@@ -313,9 +369,13 @@ class HomeView extends WatchUi.View {
         var slope = -Math.tan(angle);
         var x = dc.getWidth() - 24;
         var y = centerY + (x - centerX) * slope;
-        var stopping = app.recorder.active || app.player != null;
+        var stopping = app.recorder.active || app.recorder.startTimer != null || app.player != null;
         dc.setColor(
-            app.upload.busy || app.recorder.finishing ? Graphics.COLOR_DK_GRAY : Graphics.COLOR_RED,
+            app.recorder.awaitingDecision
+                ? Graphics.COLOR_GREEN
+                : app.upload.busy || app.recorder.finishing
+                  ? Graphics.COLOR_DK_GRAY
+                  : Graphics.COLOR_RED,
             Graphics.COLOR_TRANSPARENT
         );
         var strokeWidth = 4;
@@ -338,7 +398,10 @@ class HomeView extends WatchUi.View {
             var edgeY = centerY + (edge - centerX) * slope;
             dc.drawLine(edge, edgeY - 16, edge, edgeY + 16);
         }
-        if (stopping) {
+        if (app.recorder.awaitingDecision) {
+            dc.drawLine(x - 7, y, x - 2, y + 5);
+            dc.drawLine(x - 2, y + 5, x + 7, y - 5);
+        } else if (stopping) {
             dc.fillRectangle(x - 7, y - 7, 14, 14);
         } else {
             dc.fillCircle(x, y, 7);
@@ -366,7 +429,14 @@ class HomeDelegate extends WatchUi.BehaviorDelegate {
     }
     function onTap(event) {
         var point = event.getCoordinates();
-        if (point[1] > System.getDeviceSettings().screenHeight * 0.72) {
+        var height = System.getDeviceSettings().screenHeight;
+        if (app.recorder.awaitingDecision) {
+            if (point[1] >= height * 0.45 && point[1] < height * 0.62) {
+                app.toggle();
+            } else if (point[1] >= height * 0.63 && point[1] < height * 0.81) {
+                app.recorder.resolveDraft(false);
+            }
+        } else if (point[1] > height * 0.72) {
             app.showNotes();
         } else {
             app.toggle();
@@ -374,7 +444,11 @@ class HomeDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
     function onBack() {
-        if (app.recorder.active) {
+        if (app.recorder.awaitingDecision) {
+            app.recorder.resolveDraft(false);
+            return true;
+        }
+        if (app.recorder.active || app.recorder.startTimer != null) {
             app.recorder.stop();
             return true;
         }
