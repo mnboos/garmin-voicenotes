@@ -111,16 +111,30 @@ class VoicenotesApp extends Application.AppBase {
         var menu = new WatchUi.Menu2({:title=>"Saved notes"});
         for (var i = notes.items.size()-1; i >= 0; i--) {
             var n = notes.items[i] as Lang.Dictionary;
-            var date = Gregorian.info(new Time.Moment(n["created"]), Time.FORMAT_SHORT);
-            var title = date.day + "/" + date.month + " " + date.hour.format("%02d") + ":" + date.min.format("%02d");
-            var subtitle = n["uploaded"] ? "Uploaded" : "On watch";
-            if (n["state"] == "interrupted") { subtitle = "Partial / interrupted"; }
-            menu.addItem(new WatchUi.MenuItem(title, subtitle + " · " + n["seconds"] + "s", n["id"], null));
+            menu.addItem(new WatchUi.MenuItem(noteTitle(n), noteStatus(n) + " · " + n["seconds"] + "s", n["id"], null));
         }
         if (notes.items.size() == 0) { menu.addItem(new WatchUi.MenuItem("No notes yet", null, "empty", null)); }
         // Last item; Menu2 wraps, so it is one UP press from the top.
         menu.addItem(new WatchUi.MenuItem("Settings", "Recording options", "settings", null));
-        WatchUi.pushView(menu, new NotesDelegate(self), WatchUi.SLIDE_UP);
+        WatchUi.pushView(menu, new NotesDelegate(self, menu), WatchUi.SLIDE_UP);
+    }
+    function noteTitle(n as Lang.Dictionary) as Lang.String {
+        var date = Gregorian.info(new Time.Moment(n["created"]), Time.FORMAT_SHORT);
+        return date.day + "/" + date.month + " " + date.hour.format("%02d") + ":" + date.min.format("%02d");
+    }
+    function noteStatus(n as Lang.Dictionary) as Lang.String {
+        if (n["state"] == "interrupted") { return "Partial / interrupted"; }
+        return n["uploaded"] ? "Uploaded" : "On watch";
+    }
+    // Asks before deleting. `depth` is how many views sit above the notes list,
+    // counting the confirmation itself, so the list is shown again afterwards.
+    function confirmDelete(note as Lang.Dictionary, list as WatchUi.Menu2, depth as Lang.Number) {
+        if (upload.busy || recorder.active) { return; }
+        if (player != null) { Audio.Output.stop(); player = null; }
+        var menu = new WatchUi.Menu2({:title=>"Delete note?"});
+        menu.addItem(new WatchUi.MenuItem("Keep note", null, "keep", null));
+        menu.addItem(new WatchUi.MenuItem("Delete permanently", null, "confirm", null));
+        WatchUi.pushView(menu, new DeleteDelegate(self, note, list, depth), WatchUi.SLIDE_UP);
     }
 }
 
@@ -250,51 +264,108 @@ class SettingsDelegate extends WatchUi.Menu2InputDelegate {
 }
 class NotesDelegate extends WatchUi.Menu2InputDelegate {
     var app as VoicenotesApp;
-    function initialize(owner) { Menu2InputDelegate.initialize(); app = owner; }
+    var list as WatchUi.Menu2;
+    function initialize(owner, menu) { Menu2InputDelegate.initialize(); app = owner; list = menu; }
     function onSelect(item) {
         if (item.getId().equals("settings")) { app.showSettings(); return; }
         for (var i = 0; i < app.notes.items.size(); i++) {
             var note = app.notes.items[i] as Lang.Dictionary;
             if (note["id"].equals(item.getId())) {
-                var menu = new WatchUi.Menu2({:title=>"Note"});
-                menu.addItem(new WatchUi.MenuItem("Play", null, "play", null));
-                menu.addItem(new WatchUi.MenuItem("Upload", app.upload.message, "upload", null));
-                menu.addItem(new WatchUi.MenuItem("Delete", "Remove from watch", "delete", null));
-                WatchUi.pushView(menu, new ActionsDelegate(app, note), WatchUi.SLIDE_UP);
+                WatchUi.pushView(new NoteView(app, note), new NoteDelegate(app, note, list), WatchUi.SLIDE_LEFT);
                 return;
             }
         }
     }
 }
-class ActionsDelegate extends WatchUi.Menu2InputDelegate {
-    var app; var note;
-    function initialize(owner, selected) { Menu2InputDelegate.initialize(); app = owner; note = selected; }
-    function onSelect(item) {
-        if (app.upload.busy || app.recorder.active || app.player != null) { return; }
-        var id = item.getId();
-        if (id.equals("play")) { app.play(note); }
-        if (id.equals("upload")) { app.upload.start(note); }
-        if (id.equals("delete")) {
-            var menu = new WatchUi.Menu2({:title=>"Delete note?"});
-            menu.addItem(new WatchUi.MenuItem("Keep note", null, "keep", null));
-            menu.addItem(new WatchUi.MenuItem("Delete permanently", null, "confirm", null));
-            WatchUi.pushView(menu, new DeleteDelegate(app, note), WatchUi.SLIDE_UP);
-            return;
+
+// One note. Tap or START plays/stops, swipe left deletes, MENU/DOWN/swipe up opens actions.
+class NoteView extends WatchUi.View {
+    var app as VoicenotesApp;
+    var note as Lang.Dictionary;
+    function initialize(owner, selected) { View.initialize(); app = owner; note = selected; }
+    function onUpdate(dc) {
+        var w = dc.getWidth(); var h = dc.getHeight();
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK); dc.clear();
+        dc.drawText(w/2, h*0.14, Graphics.FONT_SMALL, app.noteTitle(note), Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(w/2, h*0.27, Graphics.FONT_XTINY, app.noteStatus(note) + " · " + note["seconds"] + "s",
+            Graphics.TEXT_JUSTIFY_CENTER);
+        var playing = app.player != null;
+        var cy = h*0.48; var r = w*0.12;
+        dc.setColor(playing ? Graphics.COLOR_GREEN : Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+        dc.fillCircle(w/2, cy, r);
+        dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
+        if (playing) {
+            dc.fillRectangle(w/2-r*0.35, cy-r*0.35, r*0.7, r*0.7);
+        } else {
+            dc.fillPolygon([[w/2-r*0.3, cy-r*0.45], [w/2-r*0.3, cy+r*0.45], [w/2+r*0.45, cy]]);
         }
-        WatchUi.popView(WatchUi.SLIDE_DOWN);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_TRANSPARENT);
+        var msg = app.upload.message.length() > 0 ? app.upload.message : app.recorder.message;
+        dc.drawText(w/2, h*0.66, Graphics.FONT_XTINY, msg, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
+        var hint = System.getDeviceSettings().isTouchScreen ? "Swipe left to delete" : "MENU: upload / delete";
+        dc.drawText(w/2, h*0.78, Graphics.FONT_XTINY, hint, Graphics.TEXT_JUSTIFY_CENTER);
+    }
+}
+class NoteDelegate extends WatchUi.BehaviorDelegate {
+    var app; var note; var list;
+    function initialize(owner, selected, menu) {
+        BehaviorDelegate.initialize(); app = owner; note = selected; list = menu;
+    }
+    function togglePlay() {
+        if (app.player != null) { Audio.Output.stop(); app.player = null; }
+        else if (!app.upload.busy) { app.upload.message = ""; app.play(note); }
+        WatchUi.requestUpdate();
+    }
+    function onSelect() { togglePlay(); return true; }
+    function onTap(event) { togglePlay(); return true; }
+    function onSwipe(event) {
+        if (event.getDirection() == WatchUi.SWIPE_LEFT) { app.confirmDelete(note, list, 2); return true; }
+        return false;
+    }
+    function onMenu() { showActions(); return true; }
+    function onNextPage() { showActions(); return true; }
+    function onBack() {
+        if (app.player != null) { Audio.Output.stop(); app.player = null; }
+        return false;
+    }
+    function showActions() {
+        if (app.recorder.active) { return; }
+        var menu = new WatchUi.Menu2({:title=>"Note"});
+        menu.addItem(new WatchUi.MenuItem(app.player != null ? "Stop" : "Play", null, "play", null));
+        menu.addItem(new WatchUi.MenuItem("Upload", app.upload.message, "upload", null));
+        menu.addItem(new WatchUi.MenuItem("Delete", "Remove from watch", "delete", null));
+        WatchUi.pushView(menu, new ActionsDelegate(app, note, list), WatchUi.SLIDE_UP);
+    }
+}
+class ActionsDelegate extends WatchUi.Menu2InputDelegate {
+    var app; var note; var list;
+    function initialize(owner, selected, menu) { Menu2InputDelegate.initialize(); app = owner; note = selected; list = menu; }
+    function onSelect(item) {
+        var id = item.getId();
+        if (id.equals("delete")) { app.confirmDelete(note, list, 3); return; }
+        if (id.equals("play")) {
+            if (app.player != null) { Audio.Output.stop(); app.player = null; }
+            else if (!app.upload.busy) { app.play(note); }
+        }
+        if (id.equals("upload") && !app.upload.busy && app.player == null) { app.upload.start(note); }
         WatchUi.popView(WatchUi.SLIDE_DOWN);
     }
 }
 class DeleteDelegate extends WatchUi.Menu2InputDelegate {
-    var app; var note;
-    function initialize(owner, selected) { Menu2InputDelegate.initialize(); app = owner; note = selected; }
+    var app; var note; var list; var depth;
+    function initialize(owner, selected, menu, count) {
+        Menu2InputDelegate.initialize(); app = owner; note = selected; list = menu; depth = count;
+    }
     function onSelect(item) {
-        if (item.getId().equals("confirm") && !app.upload.busy) {
-            try { app.notes.remove(note); app.recorder.message = "Deleted"; }
-            catch (e) { app.recorder.message = "Delete failed"; }
-            WatchUi.popView(WatchUi.SLIDE_DOWN);
-            WatchUi.popView(WatchUi.SLIDE_DOWN);
-            WatchUi.popView(WatchUi.SLIDE_DOWN);
-        } else { WatchUi.popView(WatchUi.SLIDE_DOWN); }
+        if (!item.getId().equals("confirm") || app.upload.busy) { WatchUi.popView(WatchUi.SLIDE_DOWN); return; }
+        try {
+            app.notes.remove(note);
+            app.recorder.message = "Deleted";
+            var index = list.findItemById(note["id"]);
+            if (index >= 0) { list.deleteItem(index); }
+        } catch (e) { app.recorder.message = "Delete failed"; }
+        // Back to the (updated) notes list, ready for the next note.
+        for (var i = 0; i < depth; i++) { WatchUi.popView(WatchUi.SLIDE_DOWN); }
     }
 }
