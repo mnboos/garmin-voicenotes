@@ -105,7 +105,7 @@ Before release, test on real hardware:
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The compiled `Voicenotes.iq` is attached to the run for seven days. It is signed with a throwaway key, so don't publish it.
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. It checks formatting, runs the receiver tests and compiles the app for every device in `manifest.xml`. The build is only a check; nothing is uploaded.
 
 The build job needs no secrets. It runs `build.sh --package` inside `ghcr.io/blackshadev/garmin-connectiq-tools`, the image behind the [Garmin ConnectIQ Build](https://github.com/marketplace/actions/garmin-connectiq-build) action, which already contains the Connect IQ SDK and device profiles. The workflow pins the image by digest. To move to a newer SDK, take the digest of a newer tag and update `CONNECTIQ_IMAGE` in `.github/workflows/ci.yml`.
 
