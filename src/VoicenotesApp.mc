@@ -50,6 +50,9 @@ class VoicenotesApp extends Application.AppBase {
     (:companion)
     function startPhoneSync() as Void {
         Communications.registerForPhoneAppMessages(method(:onPhoneMessage));
+        try {
+            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneReply(false));
+        } catch (e) {}
     }
     (:companion)
     function stopPhoneSync() as Void {

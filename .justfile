@@ -67,14 +67,14 @@ garmin-check:
 [private]
 [unix]
 garmin-run-fixture:
-    bash build.sh --simulator --companion --run
+    bash build.sh --simulator --run
 
-[doc("Build bin/Voicenotes.prg with the unreleased Android companion sync enabled.")]
+[doc("Build bin/Voicenotes.prg for Android companion testing.")]
 [group('garmin')]
 [private]
 [unix]
 garmin-build-companion settings="" device="fenix847mm":
-    bash build.sh --companion --device {{ quote(device) }} {{ quote(settings) }}
+    bash build.sh --device {{ quote(device) }} {{ quote(settings) }}
 
 [doc("Build the Android debug inbox APK.")]
 [group('android')]

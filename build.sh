@@ -10,7 +10,6 @@ PACKAGE=""
 RUN=""
 PRINT_SDK=""
 SIMULATOR=""
-COMPANION=""
 DEVICE=fenix847mm
 CHANNEL=release
 while [ "$#" -gt 0 ]; do
@@ -20,7 +19,7 @@ while [ "$#" -gt 0 ]; do
         --package) PACKAGE=1 ;;
         --run) RUN=1 ;;
         --simulator) SIMULATOR=1 ;;
-        --companion) COMPANION=1 ;;
+        --companion) ;; # Kept for existing build commands.
         --sdk) PRINT_SDK=1 ;;
         -*) fail "Unknown option: $1" ;;
         *)
@@ -33,7 +32,6 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 [ -z "$PACKAGE" ] || { [ -z "$SETTINGS" ] && [ -z "$RUN" ]; } || fail 'Do not combine --package with personal settings or --run.'
-[ -z "$COMPANION" ] || [ -z "$PACKAGE" ] || fail 'Do not combine --companion with --package; the store package never includes the Android companion.'
 [ -z "$SIMULATOR" ] || { [ -z "$PACKAGE" ] && [ -z "$SETTINGS" ]; } ||
     fail 'Do not combine --simulator with --package or personal settings.'
 if [ "$(uname)" = Darwin ]; then SDK_CFG="$HOME/Library/Application Support/Garmin/ConnectIQ/current-sdk.cfg"
@@ -113,7 +111,7 @@ if [ ! -f "$KEY" ]; then
     (umask 077; openssl genrsa 4096 2>/dev/null | openssl pkcs8 -topk8 -inform PEM -outform DER -nocrypt -out "$KEY")
 fi
 JUNGLE="${CHANNEL_JUNGLE:-$HERE/monkey.jungle};$HERE/resources.jungle"
-if [ -n "$SETTINGS$SIMULATOR$COMPANION" ]; then
+if [ -n "$SETTINGS$SIMULATOR" ]; then
     BUILD_DIR=$(mktemp -d "$HERE/private/build.XXXXXXXX")
     trap 'rm -rf -- "$BUILD_DIR"' EXIT
 fi
@@ -150,13 +148,7 @@ ARTIFACT="$HERE/bin/$ARTIFACT_NAME.prg"
 if [ -n "$SIMULATOR" ]; then
     ARTIFACT="$HERE/bin/Voicenotes-simulator.prg"
     JUNGLE="$JUNGLE;$HERE/simulator/fixture.jungle"
-fi
-if [ -n "$SIMULATOR$COMPANION" ]; then
-    # Override the public exclusions only for explicitly enabled features.
-    EXCLUDE=simulatorTest
-    [ -n "$COMPANION" ] || EXCLUDE="companion;$EXCLUDE"
-    [ -n "$SIMULATOR" ] || EXCLUDE="simulatorFixture;$EXCLUDE"
-    printf 'base.excludeAnnotations = %s\n' "$EXCLUDE" > "$BUILD_DIR/features.jungle"
+    printf 'base.excludeAnnotations = simulatorTest\n' > "$BUILD_DIR/features.jungle"
     JUNGLE="$JUNGLE;$BUILD_DIR/features.jungle"
 fi
 if [ -n "$PACKAGE" ]; then

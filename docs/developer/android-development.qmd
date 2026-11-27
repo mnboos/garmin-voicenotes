@@ -10,7 +10,7 @@ See [Companion](../android-sync.qmd) for installation and everyday use.
 
 1. Place the private companion source at `~/src/garmin-voicenotes-companion` or set `VOICENOTES_COMPANION_DIR`.
 2. Set `ANDROID_HOME` to an SDK with platform 37 and use a Gradle-compatible JDK 17 or newer. Run `just android-beta` to build the APK.
-3. Run `bash build.sh --companion --device <profile>` to build `bin/Voicenotes.prg` for your watch, then [install it](setup.qmd#install-a-development-build). The default and store builds exclude phone sync.
+3. Run `bash build.sh --device <profile>` to build `bin/Voicenotes.prg` for your watch, then [install it](setup.qmd#install-a-development-build).
 
 Use the profile that matches your watch.
 

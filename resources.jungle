@@ -1,5 +1,5 @@
 base.sourcePath = src
-base.excludeAnnotations = companion;simulatorFixture;simulatorTest
+base.excludeAnnotations = simulatorFixture;simulatorTest
 base.resourcePath = resources
 
  # Launcher icon sizes from the Garmin device profiles.
