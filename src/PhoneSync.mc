@@ -7,65 +7,103 @@ import Toybox.StringUtil;
 (:background, :companion)
 module PhoneSync {
     const BLOCK_BYTES = 768;
-    const MAX_NOTE_BYTES = 80000;
 
     function reply(request as Lang.Dictionary) as Lang.Dictionary? {
-        if (request["v"] != 1 || !(request["rid"] instanceof Lang.String)) {
+        var rid = request["rid"];
+        var op = request["op"];
+        if (request["v"] != 1 || !(rid instanceof Lang.String) || !(op instanceof Lang.String)) {
             return null;
         }
-        var op = request["op"];
-        var next = "next".equals(op);
-        var response = { "v" => 1, "rid" => request["rid"], "op" => next ? "empty" : "error" };
-        if ("ping".equals(op)) {
-            response["op"] = "pong";
-            return response;
+        var response = null;
+        try {
+            if (op.equals("ping")) {
+                response = { "op" => "pong" };
+            } else if (op.equals("next")) {
+                response = offer();
+            } else if (op.equals("read")) {
+                response = block(request["id"], request["offset"]);
+            } else if (op.equals("saved")) {
+                response = confirm(request["id"], request["bytes"]);
+            }
+        } catch (e) {
+            response = { "op" => "error" };
         }
-
-        var items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary>?;
-        if (items == null) {
-            return response;
-        }
-        for (var i = 0; i < items.size(); i++) {
-            var note = items[i] as Lang.Dictionary;
-            if (
-                "deleting".equals(note["state"]) ||
-                "recording".equals(note["state"]) ||
-                note["bytes"] <= 0 ||
-                note["bytes"] > MAX_NOTE_BYTES
-            ) {
-                continue;
-            }
-            var id = note["id"];
-            if (next) {
-                if (Application.Storage.getValue("phone:" + id) == true) {
-                    continue;
-                }
-                response["op"] = "offer";
-                response["id"] = id;
-                response["bytes"] = note["bytes"];
-                response["ext"] = note["extension"];
-                response["created"] = note["created"];
-                return response;
-            }
-            if (!id.equals(request["id"])) {
-                continue;
-            }
-            if ("read".equals(op) && request["offset"] instanceof Lang.Number) {
-                var block = readBlock(note, request["offset"] as Lang.Number);
-                if (block != null) {
-                    response["op"] = "block";
-                    response["id"] = id;
-                    response["offset"] = request["offset"];
-                    response["data"] = block;
-                }
-            } else if ("saved".equals(op) && request["bytes"] == note["bytes"]) {
-                Application.Storage.setValue("phone:" + id, true);
-                response["op"] = "confirmed";
-                response["id"] = id;
-            }
-            break;
+        if (response != null) {
+            response["v"] = 1;
+            response["rid"] = rid;
         }
         return response;
+    }
+
+    function catalogue() as Lang.Array<Lang.Dictionary> {
+        var items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary>?;
+        return items == null ? [] as Lang.Array<Lang.Dictionary> : items;
+    }
+
+    function sendable(note as Lang.Dictionary) as Lang.Boolean {
+        return (
+            !"deleting".equals(note["state"]) &&
+            !"recording".equals(note["state"]) &&
+            note["bytes"] > 0
+        );
+    }
+
+    function find(id) as Lang.Dictionary? {
+        if (!(id instanceof Lang.String)) {
+            return null;
+        }
+        var items = catalogue();
+        for (var i = 0; i < items.size(); i++) {
+            var note = items[i] as Lang.Dictionary;
+            if (id.equals(note["id"]) && sendable(note)) {
+                return note;
+            }
+        }
+        return null;
+    }
+
+    function offer() as Lang.Dictionary {
+        var items = catalogue();
+        for (var i = 0; i < items.size(); i++) {
+            var note = items[i] as Lang.Dictionary;
+            if (!sendable(note) || Application.Storage.getValue("phone:" + note["id"]) == true) {
+                continue;
+            }
+            return {
+                "op" => "offer",
+                "id" => note["id"],
+                "bytes" => note["bytes"],
+                "ext" => note["extension"],
+                "created" => note["created"]
+            };
+        }
+        return { "op" => "empty" };
+    }
+
+    // The requested note or audio does not exist. "error" means the lookup itself failed.
+    function missing(id) as Lang.Dictionary {
+        return { "op" => "missing", "id" => id };
+    }
+
+    function block(id, offset) as Lang.Dictionary {
+        var note = find(id);
+        if (note == null || !(offset instanceof Lang.Number)) {
+            return missing(id);
+        }
+        var data = readBlock(note, offset);
+        if (data == null) {
+            return missing(id);
+        }
+        return { "op" => "block", "id" => id, "offset" => offset, "data" => data };
+    }
+
+    function confirm(id, bytes) as Lang.Dictionary {
+        var note = find(id);
+        if (note == null || bytes != note["bytes"]) {
+            return missing(id);
+        }
+        Application.Storage.setValue("phone:" + id, true);
+        return { "op" => "confirmed", "id" => id };
     }
 
     function readBlock(note as Lang.Dictionary, offset as Lang.Number) {
@@ -93,6 +131,35 @@ module PhoneSync {
     }
 }
 
+// What the watch shows after answering the phone. Not needed by the background service.
+(:companion)
+module PhoneStatus {
+    function text(response as Lang.Dictionary, items as Lang.Array) as Lang.String? {
+        var op = response["op"];
+        if ("pong".equals(op)) {
+            return "Phone connected";
+        }
+        if ("confirmed".equals(op)) {
+            return "Sent to phone";
+        }
+        if ("missing".equals(op)) {
+            return "Note unavailable";
+        }
+        if ("error".equals(op)) {
+            return "Phone sync failed";
+        }
+        if ("block".equals(op)) {
+            for (var i = 0; i < items.size(); i++) {
+                var note = items[i] as Lang.Dictionary;
+                if (note["id"].equals(response["id"])) {
+                    return "To phone " + (response["offset"] * 100) / note["bytes"] + "%";
+                }
+            }
+        }
+        return null;
+    }
+}
+
 (:background, :companion)
 class PhoneReply extends Communications.ConnectionListener {
     var service as Lang.Boolean;
@@ -107,5 +174,21 @@ class PhoneReply extends Communications.ConnectionListener {
     }
     function onError() as Void {
         onComplete();
+    }
+}
+
+// Reports whether the opening message reached the phone.
+(:companion)
+class PhoneHello extends Communications.ConnectionListener {
+    var app as VoicenotesApp;
+    function initialize(owner as VoicenotesApp) {
+        ConnectionListener.initialize();
+        app = owner;
+    }
+    function onComplete() as Void {
+        app.phoneLink(true);
+    }
+    function onError() as Void {
+        app.phoneLink(false);
     }
 }

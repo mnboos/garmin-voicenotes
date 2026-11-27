@@ -4,6 +4,12 @@ aliases:
   - /run-simulator-tests.html
 ---
 
+## Phone sync replies
+
+Run `just test-phone-sync` to check the watch's replies to the Android companion, including notes larger than 80 KB, resumed reads, and missing audio. It needs a developer key and starts the simulator if needed, with no manual steps. Run `just test-android-sync` in the companion repository for the Android side.
+
+## Tethered Android tests
+
 Follow the [simulator requirements](simulator-test-reference.qmd#environment).
 
 1. Run `just android-emulator` in a separate terminal and wait for Android to boot.

@@ -50,9 +50,29 @@ class VoicenotesApp extends Application.AppBase {
     (:companion)
     function startPhoneSync() as Void {
         Communications.registerForPhoneAppMessages(method(:onPhoneMessage));
+        // Wake the companion before its next poll.
+        phoneMessage = "Phone: waiting";
         try {
-            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneReply(false));
-        } catch (e) {}
+            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneHello(self));
+        } catch (e) {
+            phoneMessage = "Phone: link failed";
+        }
+    }
+    (:companion)
+    function phoneLink(ok as Lang.Boolean) as Void {
+        // A late result must not replace newer transfer progress.
+        if ("Phone: waiting".equals(phoneMessage)) {
+            showPhoneStatus(ok ? "Phone: link OK" : "Phone: link failed");
+        }
+    }
+    (:companion)
+    function showPhoneStatus(text as Lang.String) as Void {
+        if (isIdle()) {
+            // An old upload result would otherwise hide the phone status.
+            upload.message = "";
+            phoneMessage = text;
+            WatchUi.requestUpdate();
+        }
     }
     (:companion)
     function stopPhoneSync() as Void {
@@ -68,12 +88,13 @@ class VoicenotesApp extends Application.AppBase {
             var response = PhoneSync.reply(request);
             if (response != null) {
                 Communications.transmit(response, null, new PhoneReply(false));
-                if ("confirmed".equals(response["op"])) {
-                    phoneMessage = "On phone";
+                var status = PhoneStatus.text(response, notes.items);
+                if (status != null) {
+                    showPhoneStatus(status);
                 }
             }
         } catch (e) {
-            phoneMessage = "Phone sync failed";
+            showPhoneStatus("Phone sync failed");
         }
     }
     (:companion)
@@ -178,6 +199,7 @@ class VoicenotesApp extends Application.AppBase {
         }
         autoStartPending = false;
         if (isIdle()) {
+            phoneMessage = "";
             recorder.start();
         }
     }

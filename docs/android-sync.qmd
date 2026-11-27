@@ -21,8 +21,6 @@ Voicenotes Companion copies recordings from a paired fēnix 8 to a phone running
 
 **On phone** confirms that the phone saved a copy. You can play or share the recording from the inbox.
 
-You can sync recordings up to 80,000 bytes (about 80 KB). For larger recordings, listen on the watch or [upload to your own server](upload.qmd).
-
 ## If a transfer pauses
 
 Open Voicenotes on both devices and tap **Sync now** again. To let an active transfer continue for up to three minutes while the phone is locked, turn on **Allow sync to finish while locked** and grant the requested permissions.

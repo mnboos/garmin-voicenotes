@@ -104,6 +104,12 @@ android-preview mode="beta" serial="":
 test-android-storage:
     just --justfile "${VOICENOTES_COMPANION_DIR:-$HOME/src/garmin-voicenotes-companion}/.justfile" test-android-storage
 
+[doc("Test the watch's replies to the Android companion. Starts the simulator if needed.")]
+[group('test')]
+[unix]
+test-phone-sync device="fenix847mm":
+    bash tests/phone/run.sh {{ quote(device) }}
+
 [doc("Run the server-off fēnix 8 to Android emulator acceptance suite on macOS.")]
 [group('test')]
 [private]
