@@ -1,5 +1,9 @@
 {
   "serverUrl": "https://voicenotes.example.com",
   "serverToken": "REPLACE_WITH_YOUR_RECEIVER_TOKEN_32_CHARS_OR_MORE",
+  "serverUrl2": "",
+  "serverToken2": "",
+  "serverUrl3": "",
+  "serverToken3": "",
   "autoUpload": true
 }

@@ -7,26 +7,26 @@ default:
 [doc("Build bin/Voicenotes.prg for a device, optionally with private settings.")]
 [group('garmin')]
 [windows]
-garmin-build-app settings="" device="fenix847mm":
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 {{ if settings == "" { "" } else { "-SettingsFile " + quote(settings) } }} -Device {{ quote(device) }}
+garmin-build-app settings="" device="fenix847mm" channel="release":
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 {{ if settings == "" { "" } else { "-SettingsFile " + quote(settings) } }} -Device {{ quote(device) }} -Channel {{ quote(channel) }}
 
 [doc("Build bin/Voicenotes.prg for a device, optionally with private settings.")]
 [group('garmin')]
 [unix]
-garmin-build-app settings="" device="fenix847mm":
-    bash build.sh --device {{ quote(device) }} {{ quote(settings) }}
+garmin-build-app settings="" device="fenix847mm" channel="release":
+    bash build.sh --device {{ quote(device) }} --channel {{ quote(channel) }} {{ quote(settings) }}
 
-[doc("Build bin/Voicenotes.iq for the store, without private settings.")]
+[doc("Build a release or beta store package without private settings.")]
 [group('garmin')]
 [windows]
-garmin-package:
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Package
+garmin-package channel="release":
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Package -Channel {{ quote(channel) }}
 
-[doc("Build bin/Voicenotes.iq for the store, without private settings.")]
+[doc("Build a release or beta store package without private settings.")]
 [group('garmin')]
 [unix]
-garmin-package:
-    bash build.sh --package
+garmin-package channel="release":
+    bash build.sh --package --channel {{ quote(channel) }}
 
 [doc("Build the public Voicenotes package; does not publish it.")]
 [group('garmin')]
@@ -35,14 +35,14 @@ garmin-release: garmin-package
 [doc("Build and run Voicenotes. Start the simulator first.")]
 [group('garmin')]
 [windows]
-garmin-run settings="" device="fenix847mm":
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 {{ if settings == "" { "" } else { "-SettingsFile " + quote(settings) } }} -Device {{ quote(device) }} -Run
+garmin-run settings="" device="fenix847mm" channel="release":
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 {{ if settings == "" { "" } else { "-SettingsFile " + quote(settings) } }} -Device {{ quote(device) }} -Channel {{ quote(channel) }} -Run
 
 [doc("Build and run Voicenotes. Start the simulator first.")]
 [group('garmin')]
 [unix]
-garmin-run settings="" device="fenix847mm":
-    bash build.sh --device {{ quote(device) }} --run {{ quote(settings) }}
+garmin-run settings="" device="fenix847mm" channel="release":
+    bash build.sh --device {{ quote(device) }} --channel {{ quote(channel) }} --run {{ quote(settings) }}
 
 [doc("Start the selected Connect IQ SDK's simulator.")]
 [group('garmin')]

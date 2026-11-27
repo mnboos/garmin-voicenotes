@@ -18,16 +18,7 @@ class Notes {
                 item["state"] = "interrupted";
             }
         }
-        refreshUploads();
         save();
-    }
-    function refreshUploads() {
-        for (var i = 0; i < items.size(); i++) {
-            var item = items[i] as Lang.Dictionary;
-            if (Application.Storage.getValue("sent:" + item["id"]) == true) {
-                item["uploaded"] = true;
-            }
-        }
     }
     function save() {
         Application.Storage.setValue("notes", items);
@@ -55,7 +46,6 @@ class Notes {
             "bytes" => 0,
             "seconds" => 0,
             "state" => "recording",
-            "uploaded" => false,
             "extension" => extension,
             "format" => [
                 format[:containerFormat],
@@ -111,6 +101,7 @@ class Notes {
             Application.Storage.deleteValue(note["id"] + ":" + i);
         }
         Application.Storage.deleteValue("phone:" + note["id"]);
+        Application.Storage.deleteValue(SyncTargets.key(note));
         Application.Storage.deleteValue("sent:" + note["id"]);
         Application.Storage.deleteValue("upload:" + note["id"]);
         Application.Storage.deleteValue("retry:" + note["id"]);

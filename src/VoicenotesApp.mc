@@ -16,6 +16,7 @@ class VoicenotesApp extends Application.AppBase {
     var notes as Notes? = null;
     var recorder as Recorder? = null;
     var upload as Upload? = null;
+    var browsingNotes = false;
     var timer;
     var player = null;
     var phoneMessage = "";
@@ -107,7 +108,7 @@ class VoicenotesApp extends Application.AppBase {
             tickSimulatorTest();
         }
         recorder.tick();
-        if (!recorder.active && player == null) {
+        if (!recorder.active && player == null && !browsingNotes) {
             upload.tick();
         }
         WatchUi.requestUpdate();
@@ -125,7 +126,7 @@ class VoicenotesApp extends Application.AppBase {
         if (self has :stopSimulatorTest) {
             stopSimulatorTest();
         }
-        if (Application.Properties.getValue("autoUpload")) {
+        if (upload.needsBackground()) {
             Background.registerForTemporalEvent(new Time.Duration(300));
         }
     }
@@ -134,7 +135,6 @@ class VoicenotesApp extends Application.AppBase {
     }
     function onBackgroundData(data) as Void {
         if (notes != null) {
-            notes.refreshUploads();
             WatchUi.requestUpdate();
         }
     }
@@ -289,6 +289,7 @@ class VoicenotesApp extends Application.AppBase {
             menu.addItem(new WatchUi.MenuItem("No notes yet", null, "empty", null));
         }
         menu.addItem(new WatchUi.MenuItem("Settings", "Recording options", "settings", null));
+        browsingNotes = true;
         WatchUi.pushView(menu, new NotesDelegate(self, menu), WatchUi.SLIDE_UP);
     }
     function noteTitle(n as Lang.Dictionary) as Lang.String {
@@ -304,13 +305,18 @@ class VoicenotesApp extends Application.AppBase {
         );
     }
     function noteStatus(n as Lang.Dictionary) as Lang.String {
-        if (self has :syncNow && Application.Storage.getValue("phone:" + n["id"]) == true) {
-            return "On phone";
+        var status = upload.status(n);
+        if (
+            status.equals("On watch") &&
+            self has :syncNow &&
+            Application.Storage.getValue("phone:" + n["id"]) == true
+        ) {
+            status = "On phone";
         }
-        if ("interrupted".equals(n["state"])) {
-            return "Partial / interrupted";
+        if (n["state"] == "interrupted" && n["bytes"] > 0) {
+            return "Partial / " + status;
         }
-        return n["uploaded"] ? "Uploaded" : "On watch";
+        return status;
     }
     // depth: views to pop, including the confirmation
     function confirmDelete(note as Lang.Dictionary, list as WatchUi.Menu2, depth as Lang.Number) {
@@ -541,6 +547,10 @@ class NotesDelegate extends WatchUi.Menu2InputDelegate {
         app = owner;
         list = menu;
     }
+    function onBack() {
+        app.browsingNotes = false;
+        WatchUi.popView(WatchUi.SLIDE_DOWN);
+    }
     function onSelect(item) {
         var id = item.getId();
         if (id.equals("location") && item instanceof WatchUi.ToggleMenuItem) {
@@ -556,11 +566,13 @@ class NotesDelegate extends WatchUi.Menu2InputDelegate {
         }
         if (id.equals("sync") && app has :syncNow) {
             app.syncNow();
+            app.browsingNotes = false;
             WatchUi.popView(WatchUi.SLIDE_DOWN);
             return;
         }
         if (id.equals("sample") && app has :saveDemoNote) {
             app.saveDemoNote();
+            app.browsingNotes = false;
             WatchUi.popView(WatchUi.SLIDE_DOWN);
             return;
         }
@@ -630,7 +642,7 @@ class NoteView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
         var hint = System.getDeviceSettings().isTouchScreen
             ? "Swipe left to delete"
-            : "MENU: upload / delete";
+            : "MENU: resync / delete";
         dc.drawText(w / 2, h * 0.78, Graphics.FONT_XTINY, hint, Graphics.TEXT_JUSTIFY_CENTER);
     }
 }
@@ -690,7 +702,7 @@ class NoteDelegate extends WatchUi.BehaviorDelegate {
         menu.addItem(
             new WatchUi.MenuItem(app.player != null ? "Stop" : "Play", null, "play", null)
         );
-        menu.addItem(new WatchUi.MenuItem("Upload", app.upload.message, "upload", null));
+        menu.addItem(new WatchUi.MenuItem("Resync", "Send to all targets", "resync", null));
         menu.addItem(new WatchUi.MenuItem("Delete", "Remove from watch", "delete", null));
         WatchUi.pushView(menu, new ActionsDelegate(app, note, list), WatchUi.SLIDE_UP);
     }
@@ -718,8 +730,12 @@ class ActionsDelegate extends WatchUi.Menu2InputDelegate {
                 app.play(note);
             }
         }
-        if (id.equals("upload") && !app.upload.busy && app.player == null) {
-            app.upload.start(note);
+        if (id.equals("resync") && !app.upload.busy && app.player == null) {
+            try {
+                app.upload.resync(note);
+            } catch (e) {
+                app.upload.message = "Could not queue sync";
+            }
         }
         WatchUi.popView(WatchUi.SLIDE_DOWN);
     }
@@ -744,6 +760,7 @@ class DeleteDelegate extends WatchUi.Menu2InputDelegate {
         app.phoneMessage = "";
         try {
             app.notes.remove(note);
+            app.upload.message = "";
             app.recorder.message = "Deleted";
             var index = list.findItemById(note["id"]);
             if (index >= 0) {

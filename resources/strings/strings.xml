@@ -1,7 +1,11 @@
 <strings>
     <string id="Voicenotes">Voicenotes</string>
-    <string id="ServerLabel">Server URL (HTTPS)</string>
-    <string id="TokenLabel">Server access token</string>
+    <string id="ServerLabel">Target 1 HTTPS URL</string>
+    <string id="TokenLabel">Target 1 access token</string>
+    <string id="Server2Label">Target 2 HTTPS URL (optional)</string>
+    <string id="Token2Label">Target 2 access token</string>
+    <string id="Server3Label">Target 3 HTTPS URL (optional)</string>
+    <string id="Token3Label">Target 3 access token</string>
     <string id="AutoLabel">Automatically upload queued notes (also in background)</string>
     <string id="AutoRecordLabel">Start recording when the app opens</string>
     <string id="VibrateLabel">Vibrate when recording starts</string>

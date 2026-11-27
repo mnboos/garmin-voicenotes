@@ -9,8 +9,14 @@ import logging
 import os
 from pathlib import Path
 import re
+import smtplib
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+if __package__:
+    from .mail_delivery import MailDelivery
+else:
+    from mail_delivery import MailDelivery
 
 LOG = logging.getLogger("voicenotes")
 # Sanity guards only; the watch limits notes by duration, not size.
@@ -27,8 +33,10 @@ class UploadError(Exception):
 
 
 class Repository:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, archive: Path | None = None, email_enabled: bool = False):
         self.root = root
+        self.archive = archive
+        self.email_enabled = email_enabled
         root.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
 
@@ -97,32 +105,107 @@ class Repository:
                 raise UploadError(422, "Audio container header missing")
             digest = hashlib.sha256(audio).hexdigest()
             metadata_path = folder / "metadata.json"
-            if metadata_path.exists():
-                existing = json.loads(metadata_path.read_text())
-                if existing["sha256"] != digest or existing["extension"] != extension:
-                    raise UploadError(409, "Finalized note differs")
-                return
-            saved = {key: meta.get(key) for key in ("id", "created", "seconds", "state", "chunks", "bytes", "extension", "format")}
-            if location is not None:
-                saved["location"] = location
-            saved["sha256"] = digest
-            metadata = json.dumps(saved, indent=2).encode()
             audio_path = folder / f"note.{extension}"
-            # An interrupted finalization may already have written the audio.
-            previous_size = audio_path.stat().st_size if audio_path.exists() else 0
-            self.check_capacity(len(metadata) + max(0, len(audio) - previous_size))
-            self.atomic_write(audio_path, audio)
-            self.atomic_write(metadata_path, metadata)
-            LOG.info("Note saved: %s, %d bytes", note_id, size)
+            if metadata_path.exists():
+                saved = json.loads(metadata_path.read_text())
+                if saved["sha256"] != digest or saved["extension"] != extension:
+                    raise UploadError(409, "Finalized note differs")
+                if not audio_path.is_file():
+                    self.check_capacity(size)
+                    self.atomic_write(audio_path, audio)
+            else:
+                # Preserve exactly what the watch sent.
+                saved = {key: meta.get(key) for key in ("id", "created", "seconds", "state", "chunks", "bytes", "extension", "format")}
+                if location is not None:
+                    saved["location"] = location
+                saved["sha256"] = digest
+                metadata = json.dumps(saved, indent=2).encode()
+                previous_size = audio_path.stat().st_size if audio_path.exists() else 0
+                self.check_capacity(len(metadata) + max(0, size - previous_size))
+                self.atomic_write(audio_path, audio)
+                self.atomic_write(metadata_path, metadata)
+                LOG.info("Note saved: %s, %d bytes", note_id, size)
+
+            if self.archive is not None:
+                destination = self.archive / f"{note_id}.{extension}"
+                if not destination.is_file() or destination.stat().st_size != size or destination.read_bytes() != audio:
+                    self.atomic_write(destination, audio)
+            if self.email_enabled and "email" not in saved:
+                saved["email"] = "pending"
+                self.save_metadata(metadata_path, saved)
+
+    def save_metadata(self, path: Path, metadata: dict):
+        self.atomic_write(path, json.dumps(metadata, indent=2).encode())
+
+
+class EmailQueue:
+    def __init__(self, repository: Repository, delivery: MailDelivery):
+        self.repository = repository
+        self.delivery = delivery
+        self.accepted = set()
+
+    def deliver_pending(self, stop: threading.Event | None = None):
+        for path in self.repository.root.glob("*/metadata.json"):
+            if stop is not None and stop.is_set():
+                return
+            try:
+                self.deliver_note(path)
+            except (OSError, smtplib.SMTPException, ValueError) as error:
+                # SMTP errors may contain addresses or server responses. Log only the error type.
+                LOG.warning("Email delivery pending for %s (%s)", path.parent.name, type(error).__name__)
+
+    def deliver_note(self, path: Path):
+        metadata = json.loads(path.read_text())
+        if metadata.get("email") != "pending":
+            return
+        note_id = path.parent.name
+        extension = metadata.get("extension")
+        if metadata.get("id") != note_id or extension not in ("ogg", "wav"):
+            raise ValueError("Invalid recording metadata")
+        digest = metadata.get("sha256")
+        key = (note_id, digest)
+        if key not in self.accepted:
+            with (path.parent / f"note.{extension}").open("rb") as recording:
+                audio = recording.read(MAX_NOTE_BYTES + 1)
+            if len(audio) > MAX_NOTE_BYTES or hashlib.sha256(audio).hexdigest() != digest:
+                raise ValueError("Recording checksum mismatch")
+            self.delivery.send(note_id, extension, digest, audio)
+            self.accepted.add(key)
+        with self.repository.lock:
+            metadata["email"] = "sent"
+            self.repository.save_metadata(path, metadata)
+        self.accepted.discard(key)
+        LOG.info("Recording email accepted: %s", note_id)
+
+    def run(self, stop: threading.Event):
+        while not stop.is_set():
+            try:
+                self.deliver_pending(stop)
+            except OSError as error:
+                LOG.warning("Cannot check email queue (%s)", type(error).__name__)
+            stop.wait(30)
 
 
 class Receiver(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address, root: Path, token: str):
-        self.repository = Repository(root)
+    def __init__(self, address, root: Path, token: str, archive: Path | None = None,
+                 delivery: MailDelivery | None = None):
+        self.repository = Repository(root, archive, email_enabled=delivery is not None)
         self.token = token
+        self.email_stop = threading.Event()
+        self.email_thread = None
         super().__init__(address, Handler)
+        if delivery is not None:
+            queue = EmailQueue(self.repository, delivery)
+            self.email_thread = threading.Thread(target=queue.run, args=(self.email_stop,), daemon=True)
+            self.email_thread.start()
+
+    def server_close(self):
+        self.email_stop.set()
+        super().server_close()
+        if self.email_thread is not None:
+            self.email_thread.join()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -185,17 +268,24 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8787)
     parser.add_argument("--data", type=Path, default=Path("data"))
+    parser.add_argument("--archive", type=Path, help="Existing mounted share or folder for exported recordings")
     args = parser.parse_args()
     token = os.environ.get("VOICENOTES_TOKEN", "")
     if len(token) < 32 or not token.isascii():
         parser.error("Set VOICENOTES_TOKEN to a random ASCII token of at least 32 characters")
+    try:
+        delivery = MailDelivery.from_environment(os.environ)
+    except ValueError as error:
+        parser.error(str(error))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    with Receiver((args.host, args.port), args.data, token) as server:
-        LOG.info("Voicenotes receiver listening on %s:%d", args.host, args.port)
-        try:
-            server.serve_forever()
-        except KeyboardInterrupt:
-            pass
+    server = Receiver((args.host, args.port), args.data, token, args.archive, delivery)
+    LOG.info("Voicenotes receiver listening on %s:%d", args.host, args.port)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":

@@ -3,18 +3,19 @@ import Toybox.Background;
 import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.System;
-import Toybox.Time;
 
 (:background)
 class BackgroundUpload extends System.ServiceDelegate {
-    var note as Lang.Dictionary? = null;
-    var index = 0;
-    var started = 0;
-    var baseUrl;
-    var token;
+    var transfer = null;
+    var items as Lang.Array<Lang.Dictionary>?;
+    var deadline;
+    var nextSlot;
+    var skipped as Lang.Array<Lang.Boolean> = [false, false, false];
+
     function initialize() {
         ServiceDelegate.initialize();
     }
+
     (:companion)
     function onPhoneAppMessage(message as Communications.PhoneAppMessage) as Void {
         var request = message.data;
@@ -31,76 +32,81 @@ class BackgroundUpload extends System.ServiceDelegate {
         Background.exit(null);
     }
     function onTemporalEvent() as Void {
-        if (!Application.Properties.getValue("autoUpload")) {
+        if (!System.getDeviceSettings().connectionAvailable) {
             Background.exit(null);
             return;
         }
-        token = Application.Properties.getValue("serverToken");
-        baseUrl = UploadRequest.endpoint(Application.Properties.getValue("serverUrl"), token);
-        if (baseUrl == null) {
-            Background.exit(null);
-            return;
-        }
-        var items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary>?;
+        SyncTargets.bindLegacy();
+        items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary>?;
         if (items == null) {
             Background.exit(null);
             return;
         }
-        note = UploadRequest.nextNote(items, true);
-        if (note == null) {
-            Background.exit(null);
-            return;
+        nextSlot = Application.Storage.getValue("sync:nextSlot");
+        if (nextSlot == null) {
+            nextSlot = 0;
         }
-        // A terminated recording still has recoverable saved chunks.
-        if ("recording".equals(note["state"])) {
-            note["state"] = "interrupted";
-        }
-        var cursor = Application.Storage.getValue("upload:" + note["id"]);
-        index = cursor == null ? 0 : cursor as Lang.Number;
-        started = System.getTimer();
-        send();
+        deadline = System.getTimer() + 20000;
+        runNext();
     }
-    function send() as Void {
-        if (System.getTimer() - started > 20000) {
-            Background.exit(null);
-            return;
-        }
-        try {
-            if (!UploadRequest.send(baseUrl, token, note, index, method(:response))) {
-                UploadRequest.defer(note, true);
-                Background.exit(null);
-            }
-        } catch (e) {
-            try {
-                UploadRequest.defer(note, false);
-            } catch (ignored) {}
-            Background.exit(null);
-        }
-    }
-    function response(code as Lang.Number, data as Communications.ContentType?) as Void {
-        if (!UploadRequest.acknowledged(code, data)) {
-            // Server data may have been restored or removed: replay safely next time.
-            try {
-                if (code == 409) {
-                    Application.Storage.deleteValue("upload:" + note["id"]);
+
+    function runNext() {
+        if (System.getTimer() < deadline) {
+            var auto = Application.Properties.getValue("autoUpload");
+            for (var offset = 0; offset < SyncTargets.COUNT; offset++) {
+                var slot = (nextSlot + offset) % SyncTargets.COUNT;
+                if (skipped[slot]) {
+                    continue;
                 }
-                UploadRequest.defer(note, UploadRequest.rejected(code));
-            } catch (e) {}
-            Background.exit(null);
-            return;
-        }
-        try {
-            if (index == note["chunks"]) {
-                Application.Storage.setValue("sent:" + note["id"], true);
-                Application.Storage.deleteValue("upload:" + note["id"]);
-                Background.exit(note["id"]);
-                return;
+                var target = SyncTargets.get(slot);
+                if (target == null) {
+                    continue;
+                }
+                var rotationKey = "sync:nextNote:" + slot;
+                var savedIndex = Application.Storage.getValue(rotationKey);
+                var first = savedIndex == null ? 0 : savedIndex as Lang.Number;
+                for (var scanned = 0; scanned < items.size(); scanned++) {
+                    var i = (first + scanned) % items.size();
+                    var note = items[i] as Lang.Dictionary;
+                    if (note["bytes"] <= 0 || "deleting".equals(note["state"])) {
+                        continue;
+                    }
+                    var progress = SyncTargets.progress(
+                        note,
+                        SyncTargets.read(note),
+                        slot,
+                        target[0]
+                    );
+                    if (progress[1] == -1 || (!auto && !progress[2])) {
+                        continue;
+                    }
+                    if (note["state"].equals("recording")) {
+                        note["state"] = "interrupted";
+                    }
+                    nextSlot = (slot + 1) % SyncTargets.COUNT;
+                    Application.Storage.setValue("sync:nextSlot", nextSlot);
+                    Application.Storage.setValue(rotationKey, i + 1);
+                    transfer = new SyncTransfer(
+                        note,
+                        slot,
+                        target,
+                        progress,
+                        deadline,
+                        method(:finished)
+                    );
+                    transfer.send();
+                    return;
+                }
             }
-            index++;
-            Application.Storage.setValue("upload:" + note["id"], index);
-            send();
-        } catch (e) {
-            Background.exit(null);
         }
+        Background.exit(null);
+    }
+
+    function finished(error) {
+        if (error != null) {
+            skipped[transfer.slot] = true;
+        }
+        transfer = null;
+        runNext();
     }
 }

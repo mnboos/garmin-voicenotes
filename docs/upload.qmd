@@ -15,8 +15,10 @@ Send your recordings to a server you run. Voicenotes keeps a copy on your watch.
 ## Upload a note
 
 1. Open a recording in **Saved notes**.
-2. Press **MENU** or **DOWN**, then choose **Upload**.
-3. Look for **Uploaded** in **Saved notes**. On your server, each recording has its own folder under `data` with the audio file and `metadata.json`.
+2. Press **MENU** or **DOWN**, then choose **Resync** to queue the note for all configured receivers.
+3. Look for the **Synced** count in **Saved notes**. On your server, each recording has its own folder under `data` with the audio file and `metadata.json`.
+
+Add up to two more receiver URLs and tokens in Garmin Connect to sync to multiple receivers.
 
 Back up the server’s `data` folder to keep a copy of your uploads.
 
@@ -25,3 +27,35 @@ To send new recordings automatically, turn on **Automatically upload queued note
 If you want to include GPS coordinates, turn on **Save location** in **Saved notes** before recording. The upload includes coordinates if your watch gets a GPS fix during the recording.
 
 [Get notified about new uploads in Home Assistant](how-to/home-assistant-notifications.qmd)
+
+## Copy recordings to a network share
+
+1. Create a folder on your NAS or file server. Give the account running the receiver write access.
+2. Keep `--data` on a local disk and add `--archive` to the receiver command. On Windows, you can use a UNC path.
+
+   ```powershell
+   python server/receiver.py --data data --archive '\\nas\recordings\voicenotes'
+   ```
+
+   On Linux, use the path to the mounted share. Arrange for the share to be mounted before the receiver starts.
+
+3. Sync a recording and look for `NOTE_ID.ogg` or `NOTE_ID.wav` in the archive. If the share is unavailable, the local copy is retained and the watch retries. Resync restores a missing archive file under the same name.
+
+## Email recordings
+
+1. Set these variables in the receiver process environment.
+
+   | Variable | Value |
+   | --- | --- |
+   | `VOICENOTES_EMAIL_FROM` | Sender address accepted by your mail provider |
+   | `VOICENOTES_EMAIL_TO` | One recipient address |
+   | `VOICENOTES_SMTP_HOST` | SMTP relay hostname |
+   | `VOICENOTES_SMTP_TLS` | `starttls` (default) or `implicit` |
+   | `VOICENOTES_SMTP_PORT` | Optional override. Defaults to 587 for STARTTLS or 465 for implicit TLS |
+   | `VOICENOTES_SMTP_USER` | SMTP username, when required |
+   | `VOICENOTES_SMTP_PASSWORD` | SMTP password or app password, when required |
+
+2. Restart the receiver. The Garmin settings stay the same. You can enable both email and the archive.
+3. Sync a recording. The receiver attaches the original audio and keeps pending email in the local data folder across restarts. Check `metadata.json` for `email: pending` or `email: sent`. Sent means the mail relay accepted the message.
+
+The receiver checks for pending email every 30 seconds. Watch resyncs do not resend a recording whose email is already marked sent. An older recording can be queued by resyncing it once after enabling email. SMTP can deliver a duplicate if the relay accepts the message but its acknowledgement is lost or the receiver stops before saving the sent status.
