@@ -1,33 +1,29 @@
 ---
-title: Compatibility and limits
+title: Compatibility
+toc: false
 ---
 
-Checked against Garmin's documentation on 23 November 2026.
+Voicenotes needs a microphone and watch firmware with Connect IQ 6.0.3 or later.
 
-The release manifest includes 29 Garmin product IDs. The D2 Mach 2 is excluded because the installed Connect IQ SDK lacks its device profile. The D2 Mach 2 Pro has its own profile and is included.
+## Watch models
 
-- Requires Connect IQ API 6.0.3 and the `AudioInput`, `AudioOutput`, `Communications`, and `Background` permissions.
-- Targets Garmin's documented Audio device families. Shared Garmin product IDs also cover related tactix, quatix, and D2 models.
-- Having a microphone does not guarantee API access. Older microphone devices absent from Garmin's Audio support list cannot be supported by adding their IDs.
-- Some devices in Garmin's Audio list may only support output. The app checks capture-format support before recording and reports unavailable capture.
-- Ogg/Opus mono at 16 kHz is preferred. WAV/LPCM mono at 8 kHz is the fallback.
-- Recordings are limited by duration, not size. The maximum length is a setting (10 s to 30 min, or no limit; default 1 min), with an optional vibration 10 seconds before the end. The watch's own app storage limit, which Garmin varies by device (often around 128 KB), is the practical ceiling: when it is reached, recording stops early.
-- Up to 40 notes. When the watch's storage is full, capture stops, earlier chunks are kept, and the note is labelled partial. Delete uploaded notes to free space.
-- Audio is written in 4 KB chunks. Interrupted recordings are labelled partial.
-- The app only captures in the foreground. The background service only uploads saved recordings.
-- The app checks connectivity once per second on the home screen. Failed targets wait 15 seconds before retrying. A detected reconnection clears that wait. After closing the app, a pending manual resync or enabled automatic upload uses Garmin's five-minute background schedule.
-- Foreground and background sync save progress for each receiver after every acknowledged chunk. Background jobs stop starting requests after 20 seconds to respect Garmin's 30-second limit. An interrupted request is safely repeated later.
-- Networking uses Garmin's normal web-request transport. There is no explicit LTE-session activation in this version; Wi-Fi/LTE availability must be verified per device.
-- The Voicenotes Companion Android app pulls recordings over Connect IQ phone messages while the watch app is open (`source/PhoneSync.mc`). A recording the phone confirmed is marked "On phone" and is not offered again.
-- Uploads are serial. Recording and playback wait for an active upload to finish. Notes are never automatically deleted.
-- The receiver is for one owner. It accepts notes up to 40 MB and 10,000 chunks and total stored files to approximately 1 GB. It retains uploaded chunks to support safe retries; monitor disk use and archive complete note folders as needed.
+The watch app has builds for these device families.
 
-Garmin's firmware may have capture/playback issues. A successful build does not prove working audio on a watch. The receiver keeps the original encoded stream, including any firmware-produced header or duration problems.
+| Family | Models |
+| --- | --- |
+| Approach | S72 |
+| D2 | Air X15, Mach 2 Pro |
+| Enduro | 3, 4 |
+| fēnix | E, 8, 8 Solar, 8 Pro, 9, 9 Pro, 9 Pro Solar |
+| Forerunner | 70, 170, 170 Music, 570, 970 |
+| MARQ | Gen 3 |
+| quatix | 8, 8 Pro |
+| tactix | 8, 8 Solar |
+| Venu | 4, X1 |
+| vívoactive | 6 |
 
-Sources:
+[Install](install.qmd) · [Companion](android-sync.qmd)
 
-- [Audio and device support](https://developer.garmin.com/connect-iq/api-docs/Toybox/Audio.html)
-- [Capture API](https://developer.garmin.com/connect-iq/api-docs/Toybox/Audio/Capture.html)
-- [Streaming playback](https://developer.garmin.com/connect-iq/api-docs/Toybox/Audio/Output/StreamingAudioSource.html)
-- [Persistent storage limits](https://developer.garmin.com/connect-iq/api-docs/Toybox/Application/Storage.html)
-- [Web requests](https://developer.garmin.com/connect-iq/api-docs/Toybox/Communications.html)
+## Watch storage
+
+You can keep up to 40 notes on your watch. If storage fills or a recording is interrupted, Voicenotes keeps any audio it already saved and marks the note **Partial / interrupted**. To free space, [delete a recording you no longer need](index.qmd#listen-to-or-delete-a-note).

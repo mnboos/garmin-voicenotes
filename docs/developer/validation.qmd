@@ -1,0 +1,19 @@
+---
+title: "Verification"
+aliases:
+  - /validation.html
+---
+
+## 23 November 2026
+
+- Connect IQ SDK 9.3.0 built the Venu 4 45 mm app and exported 29 profiles covering 33 compiler variants. Type checking passed with warnings enabled, and launcher icons matched the profiles.
+- Six receiver integration tests passed, covering authentication, retries, restart recovery, conflicting chunks, size limits, and invalid audio.
+- Windows builds passed with and without private settings. The signing key carried over, and packaging rejected private settings and unknown device IDs.
+- Bash syntax passed. Native Unix builds, simulator audio, and a live HTTPS deployment were outside this run.
+
+## Before release
+
+- On a watch, record, stop, play, and delete using buttons and touch. Check saved notes after restart, partial notes after interruption or full storage, and speaker and headphone playback.
+- Test automatic upload after reconnecting with the app open and closed. Interrupt an upload, retry, and compare the receiver checksum.
+- Disable automatic upload and verify manual upload still works.
+- For phone sync, complete the [Android beta hardware checks](android-development.qmd#physical-device-acceptance).

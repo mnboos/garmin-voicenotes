@@ -1,0 +1,30 @@
+---
+title: Privacy policy
+subtitle: "Voicenotes Companion for Android"
+---
+
+Developer Martin Boos
+
+## Data collection
+
+The developer does not collect personal data through Voicenotes Companion. The app has no account system, ads, analytics, or developer-operated cloud storage.
+
+## Watch sync and on-device processing
+
+The app uses Garmin Connect to transfer voice recordings from your paired Garmin watch to your phone. It keeps recordings, transcripts, tags, and settings in private app storage. On-device transcription processes recordings on your phone.
+
+When you download a speech model, the app contacts Hugging Face. Hugging Face receives standard connection information such as your IP address. The download request contains no recordings or transcripts.
+
+## Optional transfers
+
+Server transcription is off by default. When you use it, the app sends the recording, the model name, and any API key you provided to the server you configured. If you also enable automatic transcription with that server as the provider, new recordings can be sent automatically. The server operator controls how it handles and retains the data. Use an HTTPS server to encrypt recordings and API keys in transit.
+
+If you share a recording, Android passes it to the app or recipient you select. The recipient controls any copy it receives.
+
+## Retention and deletion
+
+Deleting a recording in the app also deletes its saved transcript. Clearing app storage or uninstalling the app removes its local data. Manage copies on your watch, on your transcription server, or with other recipients separately.
+
+## Privacy contact
+
+For privacy questions, use the App support contact on the [Voicenotes Companion Google Play listing](https://play.google.com/store/apps/details?id=ch.voicenotes).

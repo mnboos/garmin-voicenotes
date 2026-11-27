@@ -9,7 +9,8 @@ SETTINGS=""
 PACKAGE=""
 RUN=""
 PRINT_SDK=""
-DEVICE=venu445mm
+SIMULATOR=""
+DEVICE=fenix847mm
 CHANNEL=release
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -17,6 +18,8 @@ while [ "$#" -gt 0 ]; do
         --channel) [ "$#" -ge 2 ] || fail '--channel needs beta or release.'; CHANNEL=$2; shift ;;
         --package) PACKAGE=1 ;;
         --run) RUN=1 ;;
+        --simulator) SIMULATOR=1 ;;
+        --companion) ;; # Kept for existing build commands.
         --sdk) PRINT_SDK=1 ;;
         -*) fail "Unknown option: $1" ;;
         *)
@@ -29,6 +32,8 @@ while [ "$#" -gt 0 ]; do
     shift
 done
 [ -z "$PACKAGE" ] || { [ -z "$SETTINGS" ] && [ -z "$RUN" ]; } || fail 'Do not combine --package with personal settings or --run.'
+[ -z "$SIMULATOR" ] || { [ -z "$PACKAGE" ] && [ -z "$SETTINGS" ]; } ||
+    fail 'Do not combine --simulator with --package or personal settings.'
 if [ "$(uname)" = Darwin ]; then SDK_CFG="$HOME/Library/Application Support/Garmin/ConnectIQ/current-sdk.cfg"
 else SDK_CFG="$HOME/.Garmin/ConnectIQ/current-sdk.cfg"
 fi
@@ -105,13 +110,15 @@ if [ -z "${DEVELOPER_KEY:-}" ] && [ ! -f "$KEY" ] && [ -f "$HERE/.tools/develope
 if [ ! -f "$KEY" ]; then
     (umask 077; openssl genrsa 4096 2>/dev/null | openssl pkcs8 -topk8 -inform PEM -outform DER -nocrypt -out "$KEY")
 fi
-JUNGLE="$HERE/monkey.jungle"
-if [ -n "$CHANNEL_JUNGLE" ]; then JUNGLE="$CHANNEL_JUNGLE"; fi
-JUNGLE="$JUNGLE;$HERE/resources.jungle"
+JUNGLE="${CHANNEL_JUNGLE:-$HERE/monkey.jungle};$HERE/resources.jungle"
+if [ -n "$SETTINGS$SIMULATOR" ]; then
+    BUILD_DIR=$(mktemp -d "$HERE/private/build.XXXXXXXX")
+    trap 'rm -rf -- "$BUILD_DIR"' EXIT
+fi
 if [ -n "$SETTINGS" ]; then
-    mkdir -p "$HERE/private/resources"
-    cp -R "$HERE/resources/." "$HERE/private/resources/"
-    python3 -I - "$SETTINGS" "$HERE/private/resources/settings/properties.xml" <<'PY'
+    mkdir -p "$BUILD_DIR/resources"
+    cp -R "$HERE/resources/." "$BUILD_DIR/resources/"
+    python3 -I - "$SETTINGS" "$BUILD_DIR/resources/settings/properties.xml" <<'PY'
 import json
 from pathlib import Path
 import sys
@@ -130,15 +137,20 @@ for prop in tree.getroot():
         prop.text = values[prop.get('id')]
 tree.write(sys.argv[2], encoding='utf-8')
 PY
-    PERSONAL_JUNGLE="$HERE/private/Voicenotes-personal.jungle"
-    cat > "$PERSONAL_JUNGLE" <<EOF
-base.resourcePath = $HERE/private/resources
+    cat > "$BUILD_DIR/personal.jungle" <<EOF
+base.resourcePath = $BUILD_DIR/resources
 EOF
-    JUNGLE="$JUNGLE;$PERSONAL_JUNGLE"
+    JUNGLE="$JUNGLE;$BUILD_DIR/personal.jungle"
 fi
 ARTIFACT_NAME=Voicenotes
 if [ "$CHANNEL" = beta ]; then ARTIFACT_NAME=Voicenotes-beta; fi
 ARTIFACT="$HERE/bin/$ARTIFACT_NAME.prg"
+if [ -n "$SIMULATOR" ]; then
+    ARTIFACT="$HERE/bin/Voicenotes-simulator.prg"
+    JUNGLE="$JUNGLE;$HERE/simulator/fixture.jungle"
+    printf 'base.excludeAnnotations = simulatorTest\n' > "$BUILD_DIR/features.jungle"
+    JUNGLE="$JUNGLE;$BUILD_DIR/features.jungle"
+fi
 if [ -n "$PACKAGE" ]; then
     ARTIFACT="$HERE/bin/$ARTIFACT_NAME.iq"
     "$SDK/bin/monkeyc" -f "$JUNGLE" -o "$ARTIFACT" -y "$KEY" -w -r -e

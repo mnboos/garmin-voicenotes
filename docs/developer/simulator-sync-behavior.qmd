@@ -1,0 +1,11 @@
+---
+title: Simulator sync
+aliases:
+  - /simulator-sync-behavior.html
+---
+
+The reconnect test interrupts Android midway through a transfer while leaving Garmin’s simulator socket open. This tests whether the inbox resumes from the saved partial file and sends a receipt after saving the full recording.
+
+With Connect IQ SDK 9.3.0, the tether can connect while the closed watch app receives no requests. The default suite records this outcome and requires the queued note to arrive after reopening. The strict suite also requires delivery while the app is closed.
+
+[Verify Bluetooth, capture, and locked-phone behavior on hardware](android-development.qmd#physical-device-acceptance).

@@ -1,5 +1,6 @@
 import Toybox.Application;
 import Toybox.Background;
+import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.System;
 
@@ -15,6 +16,21 @@ class BackgroundUpload extends System.ServiceDelegate {
         ServiceDelegate.initialize();
     }
 
+    (:companion)
+    function onPhoneAppMessage(message as Communications.PhoneAppMessage) as Void {
+        var request = message.data;
+        if (request instanceof Lang.Dictionary) {
+            try {
+                var response = PhoneSync.reply(request);
+                if (response != null) {
+                    System.println("Phone sync background " + response["op"]);
+                    Communications.transmit(response, null, new PhoneReply(true));
+                    return;
+                }
+            } catch (e) {}
+        }
+        Background.exit(null);
+    }
     function onTemporalEvent() as Void {
         if (!System.getDeviceSettings().connectionAvailable) {
             Background.exit(null);
@@ -52,7 +68,11 @@ class BackgroundUpload extends System.ServiceDelegate {
                 for (var scanned = 0; scanned < items.size(); scanned++) {
                     var i = (first + scanned) % items.size();
                     var note = items[i] as Lang.Dictionary;
-                    if (note["state"].equals("draft") || note["bytes"] == 0) {
+                    if (
+                        note["bytes"] <= 0 ||
+                        "deleting".equals(note["state"]) ||
+                        "draft".equals(note["state"])
+                    ) {
                         continue;
                     }
                     var progress = SyncTargets.progress(

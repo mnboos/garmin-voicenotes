@@ -1,0 +1,53 @@
+---
+title: Home Assistant notifications
+---
+
+[Set up the receiver](../upload.qmd#set-up-the-receiver) and upload a test note. Home Assistant needs read access to the data directory and must receive file move events. Use the path Home Assistant sees, including inside its container.
+
+## Add Folder Watcher
+
+1. Add the data directory to the existing `homeassistant` section in `configuration.yaml`. Replace `/media/voicenotes` with your path and restart Home Assistant. [Configuration reference](https://www.home-assistant.io/docs/configuration/basic/#allowlist_external_dirs)
+
+   ```yaml
+   homeassistant:
+     allowlist_external_dirs:
+       - /media/voicenotes
+   ```
+
+2. Under **Settings → Devices & services → Add integration**, add **Folder Watcher**. Enter the same directory and the pattern `*metadata.json` to watch note subdirectories. [Folder Watcher documentation](https://www.home-assistant.io/integrations/folder_watcher/)
+3. Open the integration’s device page and copy its event entity ID.
+
+## Create the automation
+
+1. Under **Settings → Automations & scenes**, create an automation and choose **Edit in YAML**.
+2. Paste this example and replace `event.folder_watcher_voicenotes` with your entity ID.
+
+   ```yaml
+   alias: Garmin voice note saved
+   triggers:
+     - trigger: state
+       entity_id: event.folder_watcher_voicenotes
+   conditions:
+     - condition: template
+       value_template: >-
+         {{ trigger.to_state is not none
+            and trigger.to_state.attributes.get('event_type') == 'moved'
+            and trigger.to_state.attributes.get('file') == 'metadata.json.tmp'
+            and trigger.to_state.attributes.get('dest_file') == 'metadata.json' }}
+   actions:
+     - action: persistent_notification.create
+       data:
+         title: Garmin voice note saved
+         message: A new recording is ready in the receiver’s data folder.
+   mode: queued
+   ```
+
+3. Save, then upload a new note from **Saved notes**. Look for **Garmin voice note saved** in Home Assistant’s **Notifications** panel.
+
+## Troubleshoot
+
+- **No `NOTE_ID/metadata.json`.** Check the watch’s upload status.
+- **File exists, event entity stays unchanged.** Check the path, permissions, and pattern. Some network mounts do not relay file moves.
+- **Entity updates, notification missing.** Check the automation’s **Traces** for the trigger and condition. [Automation testing guide](https://www.home-assistant.io/docs/automation/testing/)
+
+[How the receiver signals a completed upload](../developer/home-assistant-integration.qmd)

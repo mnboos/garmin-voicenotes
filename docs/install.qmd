@@ -1,0 +1,12 @@
+---
+title: Install
+toc: false
+---
+
+Get Voicenotes from the Connect IQ Store for your [compatible watch](compatibility.qmd).
+
+1. Open [Voicenotes in the Connect IQ Store](https://apps.garmin.com/apps/066dd941-396c-4d0c-b145-a1554e7441b8).
+2. Install the app to your watch.
+3. Sync your watch, then open **Voicenotes** from its app list.
+
+[Record your first note](index.qmd#record-a-note) · [Build the watch app from source](developer/setup.qmd)

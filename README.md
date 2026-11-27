@@ -1,32 +1,15 @@
-# Voicenotes for Garmin
+# Voicenotes
 
-**Press START. Say it. Keep moving.**
+Record and play voice notes on a Garmin watch. Keep them on the watch, upload them to your own server, or sync them to Android from a fēnix 8.
 
-Record ideas and reminders right from your Garmin watch, even when you're offline.
+- [User guide](docs/index.qmd) for installing Voicenotes, recording on your watch, and exporting notes.
+- [Developer docs](docs/developer/index.qmd) for building the apps and running tests.
 
-<p align="center">
-  <img src="screenshot.png" width="280" alt="Voicenotes on a Garmin watch, with a microphone button and three saved notes">
-</p>
+## Build and preview
 
-- **Record and replay on your wrist.** Your notes stay on the watch after syncing.
-- **Take your notes with you.** Pull recordings into the Android companion while the watch app is open.
-- **Send recordings to your own server.** Uploads queue offline, and your server can email the audio or save it to a network share.
+Run `just garmin-build-app` to build for the fēnix 8 47 mm. See [Build the watch app](docs/developer/setup.qmd) for other models.
 
-[Build and run](docs/setup.qmd) · [Compatible watches](docs/compatibility.qmd) · [Test results](docs/validation.qmd)
-
-Voicenotes is a prototype. Recording reliability on physical watches still needs testing.
-
-## Support
-
-If Voicenotes helps you catch an idea on the go, consider supporting its development.
-
-<!-- Add GitHub Sponsors and 🍺 Buy me a beer links here when your funding pages are ready. -->
-
-[AGPL-3.0-only](LICENSE)
-
-## Documentation
-
-See the [documentation index](docs/index.qmd) and [verification results](docs/validation.qmd). Run `quarto preview docs` to preview the site or `quarto render docs` to build `docs/_site`.
+Run `just docs-preview` to preview the documentation or `quarto render docs` to build `docs/_site`.
 
 To serve the site at `http://localhost:8080` with Docker, run:
 

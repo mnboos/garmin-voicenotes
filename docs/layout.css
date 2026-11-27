@@ -1,0 +1,26 @@
+@media (min-width: 992px) {
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  /* Keep both sidebars on the same tracks, even on pages without an outline. */
+  #quarto-content.page-columns {
+    grid-template-columns:
+      [screen-start] 1.5rem
+      [screen-start-inset page-start] 15rem
+      [page-start-inset body-start-outset] minmax(1.5rem, 1fr)
+      [body-start body-content-start] minmax(0, 48rem)
+      [body-content-end body-end] minmax(1.5rem, 1fr)
+      [body-end-outset page-end-inset] 12.5rem
+      [page-end screen-end-inset] 1.5rem
+      [screen-end];
+  }
+
+  #quarto-content > #quarto-sidebar {
+    grid-column: screen-start-inset / page-start-inset;
+  }
+
+  #quarto-content > #quarto-margin-sidebar {
+    grid-column: page-end-inset / screen-end-inset;
+  }
+}

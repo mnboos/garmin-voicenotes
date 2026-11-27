@@ -1,0 +1,21 @@
+---
+title: Simulator demo
+aliases:
+  - /android-demo.html
+---
+
+Follow the [simulator requirements](simulator-test-reference.qmd#environment) and stop the Voicenotes receiver.
+
+1. Run `just android-emulator` in its own terminal and wait for Android to boot.
+2. From the repository root, build and open the inbox.
+
+   ```sh
+   just android-build
+   just android-preview demo
+   ```
+
+3. Run `just garmin-simulator`, then `just garmin-run-fixture`. In the Garmin simulator, choose **adb Connection → Start** and wait for **Connected · inbox up to date** on Android.
+4. Press START on the simulated watch. The two-second sample arrives and plays on Android. The watch shows **On phone** in **Saved notes**.
+5. Tap **Play note** on Android to hear it again.
+
+[Run the automated simulator checks](run-simulator-tests.qmd)

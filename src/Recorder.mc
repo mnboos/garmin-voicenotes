@@ -192,7 +192,12 @@ class Recorder {
         }
         active = false;
         finishing = false;
-        message = note["bytes"] > 0 ? "Saved on watch" : "No audio received";
+        message =
+            note["bytes"] == 0
+                ? "No audio received"
+                : partial
+                  ? "Partial note saved"
+                  : "Saved on watch";
         if ("draft".equals(note["state"])) {
             awaitingDecision = true;
             message = "Keep this recording?";
@@ -216,7 +221,7 @@ class Recorder {
             if (keep && note["bytes"] > 0) {
                 note["state"] = partial ? "interrupted" : "saved";
                 store.save();
-                message = "Saved on watch";
+                message = partial ? "Partial note saved" : "Saved on watch";
             } else {
                 store.remove(note);
                 message = note["bytes"] == 0 ? "No audio received" : "Deleted";

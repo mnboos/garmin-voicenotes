@@ -1,6 +1,7 @@
 import Toybox.Application;
 import Toybox.Audio;
 import Toybox.Background;
+import Toybox.Communications;
 import Toybox.Graphics;
 import Toybox.Lang;
 import Toybox.Math;
@@ -15,26 +16,121 @@ class VoicenotesApp extends Application.AppBase {
     var notes as Notes? = null;
     var recorder as Recorder? = null;
     var upload as Upload? = null;
-    var phone as PhoneSync? = null;
+    var browsingNotes = false;
     var timer;
     var player = null;
-    var browsingNotes = false;
+    var phoneMessage = "";
+    (:simulatorTest)
+    var simulatorTest as SimulatorTest? = null;
     var autoStartPending = false;
     function initialize() {
         AppBase.initialize();
     }
     function getInitialView() {
         Background.deleteTemporalEvent();
+        Background.deletePhoneAppMessageEvent();
         notes = new Notes();
         recorder = new Recorder(notes);
         upload = new Upload(notes);
-        phone = new PhoneSync(notes, upload);
+        if (self has :startSimulatorTest) {
+            startSimulatorTest();
+        }
+        if (self has :startPhoneSync) {
+            startPhoneSync();
+        }
         timer = new Timer.Timer();
         timer.start(method(:tick), 1000, true);
-        autoStartPending = Application.Properties.getValue("autoRecord") == true;
+        if (self has :saveDemoNote) {
+            recorder.message = "START saves sample";
+        } else {
+            autoStartPending = Application.Properties.getValue("autoRecord") == true;
+        }
         return [new HomeView(self), new HomeDelegate(self)];
     }
+    (:companion)
+    function startPhoneSync() as Void {
+        Communications.registerForPhoneAppMessages(method(:onPhoneMessage));
+        // Wake the companion before its next poll.
+        phoneMessage = "Phone: waiting";
+        try {
+            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneHello(self));
+        } catch (e) {
+            phoneMessage = "Phone: link failed";
+        }
+    }
+    (:companion)
+    function phoneLink(ok as Lang.Boolean) as Void {
+        // A late result must not replace newer transfer progress.
+        if ("Phone: waiting".equals(phoneMessage)) {
+            showPhoneStatus(ok ? "Phone: link OK" : "Phone: link failed");
+        }
+    }
+    (:companion)
+    function showPhoneStatus(text as Lang.String) as Void {
+        if (isIdle()) {
+            // An old upload result would otherwise hide the phone status.
+            upload.message = "";
+            phoneMessage = text;
+            WatchUi.requestUpdate();
+        }
+    }
+    (:companion)
+    function stopPhoneSync() as Void {
+        Background.registerForPhoneAppMessageEvent();
+    }
+    (:companion)
+    function onPhoneMessage(message as Communications.PhoneAppMessage) as Void {
+        var request = message.data;
+        if (!(request instanceof Lang.Dictionary)) {
+            return;
+        }
+        try {
+            var response = PhoneSync.reply(request);
+            if (response != null) {
+                Communications.transmit(response, null, new PhoneReply(false));
+                var status = PhoneStatus.text(response, notes.items);
+                if (status != null) {
+                    showPhoneStatus(status);
+                }
+            }
+        } catch (e) {
+            showPhoneStatus("Phone sync failed");
+        }
+    }
+    (:companion)
+    function syncNow() {
+        try {
+            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneReply(false));
+            phoneMessage = "Open Android inbox";
+        } catch (e) {
+            phoneMessage = "Phone unavailable";
+        }
+    }
+    (:simulatorFixture)
+    function saveDemoNote() {
+        try {
+            (new DemoFixture()).save(notes);
+            phoneMessage = "Sample saved";
+        } catch (e) {
+            phoneMessage = "Could not save sample";
+        }
+    }
+    (:simulatorTest)
+    function startSimulatorTest() as Void {
+        simulatorTest = new SimulatorTest(notes);
+    }
+    (:simulatorTest)
+    function tickSimulatorTest() as Void {
+        simulatorTest.tick(notes);
+    }
+    (:simulatorTest)
+    function stopSimulatorTest() as Void {
+        simulatorTest.stop();
+    }
     function tick() as Void {
+        if (self has :tickSimulatorTest) {
+            tickSimulatorTest();
+        }
         recorder.tick();
         if (
             !recorder.active &&
@@ -54,6 +150,12 @@ class VoicenotesApp extends Application.AppBase {
         timer.stop();
         recorder.shutdown();
         Audio.Output.stop();
+        if (self has :stopPhoneSync) {
+            stopPhoneSync();
+        }
+        if (self has :stopSimulatorTest) {
+            stopSimulatorTest();
+        }
         if (upload.needsBackground()) {
             Background.registerForTemporalEvent(new Time.Duration(300));
         }
@@ -70,6 +172,7 @@ class VoicenotesApp extends Application.AppBase {
         if (recorder.active || upload.busy) {
             return;
         }
+        phoneMessage = "";
         try {
             Audio.Output.stop();
             player = new NoteAudio(notes, note, self);
@@ -89,12 +192,26 @@ class VoicenotesApp extends Application.AppBase {
         }
         WatchUi.requestUpdate();
     }
+    function stopPlayback() {
+        Audio.Output.stop();
+        player = null;
+    }
+    function isIdle() {
+        return (
+            !recorder.active &&
+            recorder.startTimer == null &&
+            !recorder.awaitingDecision &&
+            player == null &&
+            !upload.busy
+        );
+    }
     function autoStart() {
         if (!autoStartPending) {
             return;
         }
         autoStartPending = false;
-        if (!recorder.active && player == null && !upload.busy) {
+        if (isIdle()) {
+            phoneMessage = "";
             recorder.start();
         }
     }
@@ -166,8 +283,7 @@ class VoicenotesApp extends Application.AppBase {
     }
     function toggle() {
         if (player != null) {
-            Audio.Output.stop();
-            player = null;
+            stopPlayback();
             return;
         }
         if (recorder.awaitingDecision) {
@@ -176,22 +292,28 @@ class VoicenotesApp extends Application.AppBase {
             recorder.stop();
         } else if (!upload.busy) {
             upload.message = "";
+            phoneMessage = "";
             recorder.start();
         }
     }
     function showNotes() {
-        if (
-            recorder.active ||
-            recorder.startTimer != null ||
-            recorder.awaitingDecision ||
-            upload.busy ||
-            player != null
-        ) {
+        if (!isIdle()) {
             return;
         }
         var menu = new WatchUi.Menu2({ :title => "Saved notes" });
+        if (self has :syncNow) {
+            menu.addItem(new WatchUi.MenuItem("Sync now", null, "sync", null));
+        }
+        if (self has :saveDemoNote) {
+            menu.addItem(new WatchUi.MenuItem("Save sample WAV", null, "sample", null));
+        }
+        var hasNotes = false;
         for (var i = notes.items.size() - 1; i >= 0; i--) {
             var n = notes.items[i] as Lang.Dictionary;
+            if ("deleting".equals(n["state"])) {
+                continue;
+            }
+            hasNotes = true;
             menu.addItem(
                 new WatchUi.MenuItem(
                     noteTitle(n),
@@ -201,7 +323,7 @@ class VoicenotesApp extends Application.AppBase {
                 )
             );
         }
-        if (notes.items.size() == 0) {
+        if (!hasNotes) {
             menu.addItem(new WatchUi.MenuItem("No notes yet", null, "empty", null));
         }
         menu.addItem(new WatchUi.MenuItem("Settings", "Recording options", "settings", null));
@@ -222,7 +344,11 @@ class VoicenotesApp extends Application.AppBase {
     }
     function noteStatus(n as Lang.Dictionary) as Lang.String {
         var status = upload.status(n);
-        if (status.equals("On watch") && PhoneSync.delivered(n)) {
+        if (
+            status.equals("On watch") &&
+            self has :syncNow &&
+            Application.Storage.getValue("phone:" + n["id"]) == true
+        ) {
             status = "On phone";
         }
         if (n["state"] == "interrupted" && n["bytes"] > 0) {
@@ -236,8 +362,7 @@ class VoicenotesApp extends Application.AppBase {
             return;
         }
         if (player != null) {
-            Audio.Output.stop();
-            player = null;
+            stopPlayback();
         }
         var menu = new WatchUi.Menu2({ :title => "Delete note?" });
         menu.addItem(new WatchUi.MenuItem("Keep note", null, "keep", null));
@@ -323,20 +448,15 @@ class HomeView extends WatchUi.View {
                 (app.recorder.limit > 0 ? " / " + app.recorder.limit + " s" : " seconds");
         }
         dc.drawText(w / 2, h * 0.59, Graphics.FONT_SMALL, status, Graphics.TEXT_JUSTIFY_CENTER);
-        var msg =
-            !app.recorder.active &&
-            app.recorder.startTimer == null &&
-            app.upload.message.length() > 0
-                ? app.upload.message
-                : app.recorder.message;
-        dc.drawText(w / 2, h * 0.7, Graphics.FONT_XTINY, msg, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(
+            w / 2,
+            h * 0.7,
+            Graphics.FONT_XTINY,
+            statusMessage(),
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
         drawButtonHint(dc);
-        if (
-            !app.recorder.active &&
-            app.recorder.startTimer == null &&
-            app.player == null &&
-            !app.upload.busy
-        ) {
+        if (app.isIdle()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_TRANSPARENT);
             dc.setPenWidth(2);
             for (var row = 0; row < 3; row++) {
@@ -344,6 +464,19 @@ class HomeView extends WatchUi.View {
                 dc.drawLine(w / 2 - 10, y, w / 2 + 10, y);
             }
         }
+    }
+    function statusMessage() {
+        if (
+            !app.recorder.active &&
+            app.recorder.startTimer == null &&
+            app.upload.message.length() > 0
+        ) {
+            return app.upload.message;
+        }
+        if (app.isIdle() && app.phoneMessage.length() > 0) {
+            return app.phoneMessage;
+        }
+        return app.recorder.message;
     }
     function drawButtonHint(dc) {
         var centerX = dc.getWidth() / 2.0;
@@ -416,7 +549,11 @@ class HomeDelegate extends WatchUi.BehaviorDelegate {
         app = owner;
     }
     function onSelect() {
-        app.toggle();
+        if (app has :saveDemoNote) {
+            app.saveDemoNote();
+        } else {
+            app.toggle();
+        }
         return true;
     }
     function onMenu() {
@@ -453,8 +590,7 @@ class HomeDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (app.player != null) {
-            Audio.Output.stop();
-            app.player = null;
+            app.stopPlayback();
             return true;
         }
         return false;
@@ -503,13 +639,26 @@ class NotesDelegate extends WatchUi.Menu2InputDelegate {
         WatchUi.popView(WatchUi.SLIDE_DOWN);
     }
     function onSelect(item) {
-        if (item.getId().equals("settings")) {
+        var id = item.getId();
+        if (id.equals("sync") && app has :syncNow) {
+            app.syncNow();
+            app.browsingNotes = false;
+            WatchUi.popView(WatchUi.SLIDE_DOWN);
+            return;
+        }
+        if (id.equals("sample") && app has :saveDemoNote) {
+            app.saveDemoNote();
+            app.browsingNotes = false;
+            WatchUi.popView(WatchUi.SLIDE_DOWN);
+            return;
+        }
+        if (id.equals("settings")) {
             app.showSettings();
             return;
         }
         for (var i = 0; i < app.notes.items.size(); i++) {
             var note = app.notes.items[i] as Lang.Dictionary;
-            if (note["id"].equals(item.getId())) {
+            if (note["id"].equals(id)) {
                 WatchUi.pushView(
                     new NoteView(app, note),
                     new NoteDelegate(app, note, list),
@@ -585,8 +734,7 @@ class NoteDelegate extends WatchUi.BehaviorDelegate {
     }
     function togglePlay() {
         if (app.player != null) {
-            Audio.Output.stop();
-            app.player = null;
+            app.stopPlayback();
         } else if (!app.upload.busy) {
             app.upload.message = "";
             app.play(note);
@@ -618,8 +766,7 @@ class NoteDelegate extends WatchUi.BehaviorDelegate {
     }
     function onBack() {
         if (app.player != null) {
-            Audio.Output.stop();
-            app.player = null;
+            app.stopPlayback();
         }
         return false;
     }
@@ -654,8 +801,7 @@ class ActionsDelegate extends WatchUi.Menu2InputDelegate {
         }
         if (id.equals("play")) {
             if (app.player != null) {
-                Audio.Output.stop();
-                app.player = null;
+                app.stopPlayback();
             } else if (!app.upload.busy) {
                 app.play(note);
             }
@@ -683,10 +829,11 @@ class DeleteDelegate extends WatchUi.Menu2InputDelegate {
         depth = count;
     }
     function onSelect(item) {
-        if (!item.getId().equals("confirm") || app.upload.busy) {
+        if (!item.getId().equals("confirm") || !app.isIdle()) {
             WatchUi.popView(WatchUi.SLIDE_DOWN);
             return;
         }
+        app.phoneMessage = "";
         try {
             app.notes.remove(note);
             app.upload.message = "";

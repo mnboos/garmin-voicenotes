@@ -23,7 +23,7 @@ LOG = logging.getLogger("voicenotes")
 MAX_NOTE_BYTES = 40_000_000
 MAX_CHUNKS = 10_000  # chunk files use four-digit names
 MAX_DISK_BYTES = 1_000_000_000
-NOTE_PATH = re.compile(r"/api/notes/([a-zA-Z0-9-]{1,100})/(chunks/(\d+)|complete)\Z")
+NOTE_PATH = re.compile(r"/api/notes/([a-zA-Z0-9-]{1,100})/(?:chunks/(\d+)|complete)")
 
 
 class UploadError(Exception):
@@ -48,6 +48,11 @@ class Repository:
             os.fsync(stream.fileno())
         temp.replace(path)
 
+    def check_capacity(self, additional_bytes: int):
+        used = sum(path.stat().st_size for path in self.root.rglob("*") if path.is_file())
+        if used + additional_bytes > MAX_DISK_BYTES:
+            raise UploadError(507, "Receiver storage full")
+
     def put_chunk(self, note_id: str, index: int, content: bytes):
         if not 0 <= index < MAX_CHUNKS or not 0 < len(content) <= 4096:
             raise UploadError(400, "Invalid chunk")
@@ -63,14 +68,19 @@ class Repository:
                 raise UploadError(409, "Note already complete")
             if sum(p.stat().st_size for p in folder.glob("*.chunk")) + len(content) > MAX_NOTE_BYTES:
                 raise UploadError(413, "Note too large")
-            if sum(p.stat().st_size for p in self.root.rglob("*") if p.is_file()) + len(content) > MAX_DISK_BYTES:
-                raise UploadError(507, "Receiver storage full")
+            self.check_capacity(len(content))
             self.atomic_write(target, content)
 
     def complete(self, note_id: str, meta: dict):
-        count, size, extension = meta.get("chunks"), meta.get("bytes"), meta.get("extension")
-        if (meta.get("id") != note_id or type(count) is not int or not 1 <= count <= MAX_CHUNKS
-                or type(size) is not int or not 0 < size <= MAX_NOTE_BYTES or extension not in ("ogg", "wav")):
+        count = meta.get("chunks")
+        size = meta.get("bytes")
+        extension = meta.get("extension")
+        if (
+            meta.get("id") != note_id
+            or type(count) is not int or not 1 <= count <= MAX_CHUNKS
+            or type(size) is not int or not 0 < size <= MAX_NOTE_BYTES
+            or extension not in ("ogg", "wav")
+        ):
             raise UploadError(400, "Invalid note metadata")
         with self.lock:
             folder = self.root / note_id
@@ -80,7 +90,11 @@ class Repository:
             audio = b"".join(chunk.read_bytes() for chunk in chunks)
             if len(audio) != size or len(list(folder.glob("*.chunk"))) != count:
                 raise UploadError(409, "Size or chunk count mismatch")
-            if not (audio.startswith(b"OggS") if extension == "ogg" else audio.startswith(b"RIFF") and audio[8:12] == b"WAVE"):
+            if extension == "ogg":
+                valid_header = audio.startswith(b"OggS")
+            else:
+                valid_header = audio.startswith(b"RIFF") and audio[8:12] == b"WAVE"
+            if not valid_header:
                 raise UploadError(422, "Audio container header missing")
             digest = hashlib.sha256(audio).hexdigest()
             metadata_path = folder / "metadata.json"
@@ -90,13 +104,17 @@ class Repository:
                 if saved["sha256"] != digest or saved["extension"] != extension:
                     raise UploadError(409, "Finalized note differs")
                 if not audio_path.is_file():
+                    self.check_capacity(size)
                     self.atomic_write(audio_path, audio)
             else:
                 # Preserve exactly what the watch sent.
-                self.atomic_write(audio_path, audio)
                 saved = {key: meta.get(key) for key in ("id", "created", "seconds", "state", "chunks", "bytes", "extension", "format")}
                 saved["sha256"] = digest
-                self.save_metadata(metadata_path, saved)
+                metadata = json.dumps(saved, indent=2).encode()
+                previous_size = audio_path.stat().st_size if audio_path.exists() else 0
+                self.check_capacity(len(metadata) + max(0, size - previous_size))
+                self.atomic_write(audio_path, audio)
+                self.atomic_write(metadata_path, metadata)
                 LOG.info("Note saved: %s, %d bytes", note_id, size)
 
             if self.archive is not None:
@@ -166,9 +184,9 @@ class Receiver(ThreadingHTTPServer):
                  delivery: MailDelivery | None = None):
         self.repository = Repository(root, archive, email_enabled=delivery is not None)
         self.token = token
-        super().__init__(address, Handler)
         self.email_stop = threading.Event()
         self.email_thread = None
+        super().__init__(address, Handler)
         if delivery is not None:
             queue = EmailQueue(self.repository, delivery)
             self.email_thread = threading.Thread(target=queue.run, args=(self.email_stop,), daemon=True)
@@ -207,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
             match = NOTE_PATH.fullmatch(self.path)
             if not match:
                 raise UploadError(404, "Unknown endpoint")
-            note_id, action, chunk_index = match.groups()
+            note_id, chunk_index = match.groups()
             if (self.command == "PUT") != (chunk_index is not None):
                 raise UploadError(405, "Wrong method")
             length = int(self.headers.get("Content-Length", "0"))
@@ -226,7 +244,7 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(200, {"ok": True})
         except UploadError as error:
             self.respond(error.status, {"ok": False, "error": str(error)})
-        except (ValueError, UnicodeError):
+        except ValueError:
             self.respond(400, {"ok": False, "error": "Invalid request"})
         except OSError:
             LOG.exception("Receiver I/O failure")

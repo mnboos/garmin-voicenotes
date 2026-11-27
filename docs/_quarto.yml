@@ -4,19 +4,47 @@ project:
 
 website:
   title: Voicenotes
-  sidebar:
+  navbar:
     search: true
-    contents:
-      - href: index.qmd
-        text: Documentation home
-      - section: How-to guides
-        contents:
-          - setup.qmd
-      - section: Reference
-        contents:
-          - compatibility.qmd
-          - validation.qmd
+    left:
+      - text: User guide
+        href: index.qmd
+      - text: Developer docs
+        href: developer/index.qmd
+  sidebar:
+    - title: User guide
+      contents:
+        - index.qmd
+        - install.qmd
+        - compatibility.qmd
+        - android-sync.qmd
+        - section: Integrations
+          contents:
+            - upload.qmd
+            - how-to/home-assistant-notifications.qmd
+        - href: privacy.qmd
+          text: Privacy
+    - title: Developer docs
+      contents:
+        - developer/index.qmd
+        - developer/setup.qmd
+        - developer/android-development.qmd
+        - section: Testing
+          contents:
+            - developer/android-demo.qmd
+            - developer/run-simulator-tests.qmd
+            - developer/simulator-test-reference.qmd
+            - developer/validation.qmd
+        - section: Internals
+          contents:
+            - developer/simulator-sync-behavior.qmd
+            - developer/home-assistant-integration.qmd
+  page-footer:
+    right:
+      - href: privacy.qmd
+        text: Privacy
 
 format:
   html:
     toc: true
+    css: layout.css

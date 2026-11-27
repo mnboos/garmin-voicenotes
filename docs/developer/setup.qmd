@@ -1,0 +1,75 @@
+---
+title: Watch build
+aliases:
+  - /setup.html
+---
+
+## Build the watch app
+
+Install Java, `just`, and Connect IQ SDK 9.3.0 or newer for your OS. Update device profiles in Garmin SDK Manager to API 6.0.3 or newer. Unix builds also need Bash, Python 3, and OpenSSL.
+
+| Task | Command |
+| --- | --- |
+| Build for fēnix 8 47 mm | `just garmin-build-app` |
+| Build for another device | `just garmin-build-app "" fr970` |
+| Run in the simulator | Run `just garmin-simulator`, then `just garmin-run` |
+| Build the store package | `just garmin-package` produces `bin/Voicenotes.iq` |
+| Check installed profiles on Windows | `just garmin-check` |
+
+Release builds use `bin/Voicenotes.prg` or `bin/Voicenotes.iq`. For a beta listing, set `GARMIN_BETA_APP_ID` and run `just garmin-package beta` to produce `bin/Voicenotes-beta.iq`. Set `GARMIN_RELEASE_APP_ID` to override the release ID in the manifest. [Install the build on your watch](#install-a-development-build).
+
+The scripts look for the SDK in `CONNECTIQ_SDK`, Garmin’s selected SDK, then `.tools/sdk`. Back up `private/developer_key.der` for future updates. The first build reuses `.tools/developer.der` if present. Set `DEVELOPER_KEY` to use another key.
+
+### Build without just
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Device fr970
+powershell -NoProfile -ExecutionPolicy Bypass -File build.ps1 -Package
+```
+
+```sh
+bash build.sh --device fr970
+bash build.sh --package
+```
+
+PowerShell also accepts `-SdkPath` and `-DeveloperKey`. The aliases `-Sdk`, `-Key`, and `-Export` still work.
+
+## Build with private settings
+
+1. Copy `settings.example.json` to `private/settings.json`.
+2. Set `serverUrl`, `serverToken`, and `autoUpload`. Add `serverUrl2` / `serverToken2` and `serverUrl3` / `serverToken3` for additional receivers.
+3. Run `just garmin-build-app private/settings.json fr970` with your device ID.
+
+The sideload build contains your token. Keep it and `private/settings.json` private. Store packaging rejects private settings.
+
+## Install a development build {#install-a-development-build}
+
+1. Connect your watch to your computer by USB.
+2. Copy the `bin/Voicenotes.prg` built for your [watch model](../compatibility.qmd) into the watch’s `GARMIN/APPS` folder.
+3. Disconnect the watch and open **Voicenotes** from its app list.
+
+## Run the export receiver
+
+See [Set up the receiver](../upload.qmd#set-up-the-receiver).
+
+## Recording and upload details
+
+- The app tries mono Ogg/Opus at 16 kHz, then mono WAV/LPCM at 8 kHz. Audio is stored in 4 KB chunks.
+- The optional end warning vibrates up to 10 seconds before the recording limit.
+- A failed target waits 15 seconds in the foreground before retrying. A reconnect clears that wait.
+- After the app closes, Garmin schedules background jobs at a requested five-minute interval. Jobs checkpoint acknowledged chunks and stop starting requests after 20 seconds.
+- The receiver accepts one token, up to 40 MB and 10,000 chunks per note, and about 1 GB of stored data. It validates the container header and chunk set and keeps the original audio bytes.
+
+## Verify changes
+
+```sh
+npm ci
+just lint
+python -m unittest discover -s server -v
+```
+
+Run `just format` to reformat Monkey C. For hardware checks, see the [verification checklist](validation.qmd#before-release).
+
+## Continuous integration
+
+Pull requests and pushes to `main` run **Format check**, **Receiver tests**, and **Compile watch app**. The compile job uses a pinned [Connect IQ image](https://github.com/marketplace/actions/garmin-connectiq-build) for `build.sh --package`. Update `CONNECTIQ_IMAGE` in `.github/workflows/ci.yml` when upgrading the SDK or device profiles.

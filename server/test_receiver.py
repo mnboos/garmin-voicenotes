@@ -139,6 +139,16 @@ class ReceiverTests(unittest.TestCase):
         self.assertEqual(self.finish(bytes=999), 409)
         self.assertFalse((self.root / "watch-123/metadata.json").exists())
 
+    def test_finalization_respects_disk_quota_and_can_retry(self):
+        self.assertEqual(self.put(0, self.audio[:20]), 200)
+        self.assertEqual(self.put(1, self.audio[20:]), 200)
+        with patch("receiver.MAX_DISK_BYTES", 2 * len(self.audio)):
+            self.assertEqual(self.finish(), 507)
+        folder = self.root / "watch-123"
+        self.assertFalse((folder / "note.wav").exists())
+        self.assertFalse((folder / "metadata.json").exists())
+        self.assertEqual(self.finish(), 200)
+
 
 class MailDeliveryTests(unittest.TestCase):
     @patch("mail_delivery.smtplib.SMTP")

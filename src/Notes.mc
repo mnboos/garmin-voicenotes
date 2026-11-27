@@ -1,8 +1,6 @@
 import Toybox.Application;
-import Toybox.Audio;
 import Toybox.Lang;
 import Toybox.Math;
-import Toybox.System;
 import Toybox.Time;
 
 class Notes {
@@ -10,10 +8,17 @@ class Notes {
     function initialize() {
         var stored = Application.Storage.getValue("notes");
         items = stored == null ? [] : stored as Lang.Array<Lang.Dictionary>;
-        for (var i = 0; i < items.size(); i++) {
+        for (var i = items.size() - 1; i >= 0; i--) {
             var item = items[i] as Lang.Dictionary;
-            if ("recording".equals(item["state"])) {
+            if ("deleting".equals(item["state"])) {
+                finishRemoval(item);
+            } else if ("recording".equals(item["state"]) || "interrupted".equals(item["state"])) {
+                // Discard the window that never committed to the catalog.
+                Application.Storage.deleteValue(item["id"] + ":" + item["chunks"]);
                 item["state"] = "interrupted";
+            } else if ("draft".equals(item["state"])) {
+                // Keep the committed draft available for the user's decision.
+                Application.Storage.deleteValue(item["id"] + ":" + item["chunks"]);
             }
         }
         save();
@@ -62,6 +67,7 @@ class Notes {
         return note;
     }
     function append(note as Lang.Dictionary, data as Lang.ByteArray) {
+        // Write audio before publishing it in the catalogue.
         var key = note["id"] + ":" + note["chunks"];
         Application.Storage.setValue(key, data);
         note["chunks"] += 1;
@@ -83,22 +89,26 @@ class Notes {
         return { :containerFormat => f[0], :codec => f[1], :frequency => f[2], :channels => f[3] };
     }
     function remove(note as Lang.Dictionary) {
-        // Keep the note intact if the catalogue write fails.
-        var previous = items;
-        items = items.slice(0, items.size());
-        items.remove(note);
+        var previous = note["state"];
+        note["state"] = "deleting";
         try {
             save();
         } catch (e) {
-            items = previous;
+            note["state"] = previous;
             throw e;
         }
+        finishRemoval(note);
+    }
+    function finishRemoval(note as Lang.Dictionary) {
         for (var i = 0; i < note["chunks"]; i++) {
             Application.Storage.deleteValue(note["id"] + ":" + i);
         }
+        Application.Storage.deleteValue("phone:" + note["id"]);
         Application.Storage.deleteValue(SyncTargets.key(note));
         Application.Storage.deleteValue("sent:" + note["id"]);
         Application.Storage.deleteValue("upload:" + note["id"]);
-        Application.Storage.deleteValue(PhoneSync.deliveredKey(note));
+        Application.Storage.deleteValue("retry:" + note["id"]);
+        items.remove(note);
+        save();
     }
 }

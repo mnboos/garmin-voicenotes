@@ -1,0 +1,39 @@
+---
+title: Android beta
+aliases:
+  - /android-development.html
+---
+
+See [Companion](../android-sync.qmd) for installation and everyday use.
+
+## Build from source
+
+1. Place the private companion source at `~/src/garmin-voicenotes-companion` or set `VOICENOTES_COMPANION_DIR`.
+2. Set `ANDROID_HOME` to an SDK with platform 37 and use a Gradle-compatible JDK 17 or newer. Run `just android-beta` to build the APK.
+3. Run `bash build.sh --device <profile>` to build `bin/Voicenotes.prg` for your watch, then [install it](setup.qmd#install-a-development-build).
+
+Use the profile that matches your watch.
+
+| fēnix 8 variant | Device profile |
+| --- | --- |
+| 43 mm AMOLED | `fenix843mm` |
+| 47 mm or 51 mm AMOLED | `fenix847mm` |
+| 47 mm Solar | `fenix8solar47mm` |
+| 51 mm Solar | `fenix8solar51mm` |
+
+With USB debugging enabled, run `adb -d install -r bin/android/Voicenotes-beta.apk` to install the APK.
+
+Reuse the Android signing key and Garmin developer key when installing updates.
+
+## Preview in the Android emulator
+
+Boot with `just android-emulator` in a separate terminal, then run `just android-preview beta`. Add the emulator serial if several are running. To transfer audio from a simulated watch, follow the [tethered demo](android-demo.qmd).
+
+## Physical-device acceptance
+
+- With the HTTPS receiver stopped, record and sync a note. Check its date, playback, Android sharing, and the watch’s **On phone** label.
+- Interrupt Bluetooth mid-transfer. Reconnect and check that the transfer resumes and produces one copy. Repeat with the phone locked.
+- Sync with the watch app closed. If delivery stalls, reopen it and check that the same note arrives.
+- Record the watch model and firmware, Android version, and locked-phone result.
+
+Run `just test-android-storage` for inbox storage checks. See the [simulator test guide](run-simulator-tests.qmd) for tethered tests.

@@ -1,0 +1,11 @@
+---
+title: Developer docs
+toc: false
+---
+
+Build Voicenotes from source and verify changes on the simulator or real hardware.
+
+- [Watch build](setup.qmd)
+- [Android beta](android-development.qmd)
+- [Simulator tests](run-simulator-tests.qmd)
+- [Release checklist](validation.qmd#before-release)

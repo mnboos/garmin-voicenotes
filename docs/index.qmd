@@ -1,15 +1,31 @@
 ---
-title: Voicenotes documentation
+title: First steps
 toc: false
 ---
 
-Record and play voice notes on a Garmin watch and export them to configured receivers.
+Record a voice note on your Garmin watch and listen to it right on your wrist. You can also copy notes off the watch.
 
-## How-to guides
+[Compatibility](compatibility.qmd) · [Install](install.qmd)
 
-- [Build the watch app and run the export receiver](setup.qmd)
+## Record {#record-a-note}
 
-## Reference
+1. Open **Voicenotes** on your watch.
+2. Press **START** or tap the microphone to record.
+3. Press **START** or **BACK**, or tap the stop icon, to save.
 
-- [Compatibility and limits](compatibility.qmd)
-- [Verification results](validation.qmd)
+Recordings stop after one minute by default. In **Saved notes → Settings**, you can change **Max length**, turn on **Auto-record**, or adjust vibration.
+
+## Play or delete {#listen-to-or-delete-a-note}
+
+1. From the main screen, tap the list icon at the bottom or press **MENU** or **DOWN** to open **Saved notes**.
+2. Select a recording.
+3. Tap the screen or press **START** to play.
+
+To remove a recording, open it, swipe left or choose **MENU → Delete**, then select **Delete permanently**.
+
+## Export {#copy-a-note-off-your-watch}
+
+- [Sync to an Android phone](android-sync.qmd) from a fēnix 8.
+- [Upload to your own server](upload.qmd) using HTTPS.
+
+Both options keep the original on your watch.

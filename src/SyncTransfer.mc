@@ -131,6 +131,7 @@ class SyncTransfer {
             },
             :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON
         };
+        var metadata = null;
         if (cursor < note["chunks"]) {
             var chunk = Application.Storage.getValue(note["id"] + ":" + cursor);
             if (!(chunk instanceof Lang.ByteArray)) {
@@ -146,14 +147,19 @@ class SyncTransfer {
                 "Content-Type" => "application/json"
             };
             path += "/complete";
+            metadata = {
+                "id" => note["id"],
+                "created" => note["created"],
+                "seconds" => note["seconds"],
+                "state" => note["state"],
+                "chunks" => note["chunks"],
+                "bytes" => note["bytes"],
+                "extension" => note["extension"],
+                "format" => note["format"]
+            };
         }
         try {
-            Communications.makeWebRequest(
-                target[0] + path,
-                cursor == note["chunks"] ? note : null,
-                options,
-                method(:response)
-            );
+            Communications.makeWebRequest(target[0] + path, metadata, options, method(:response));
         } catch (e) {
             finished.invoke("Connection unavailable");
         }
