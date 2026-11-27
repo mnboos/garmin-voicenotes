@@ -21,7 +21,7 @@ class Notes {
     function save() {
         Application.Storage.setValue("notes", items);
     }
-    function create(format as Lang.Dictionary, extension) {
+    function create(format as Lang.Dictionary, extension, state) {
         if (items.size() >= 40) {
             throw new Lang.InvalidValueException("Storage full");
         }
@@ -43,7 +43,7 @@ class Notes {
             "chunks" => 0,
             "bytes" => 0,
             "seconds" => 0,
-            "state" => "recording",
+            "state" => state,
             "extension" => extension,
             "format" => [
                 format[:containerFormat],
@@ -53,7 +53,12 @@ class Notes {
             ]
         };
         items.add(note);
-        save();
+        try {
+            save();
+        } catch (e) {
+            items.remove(note);
+            throw e;
+        }
         return note;
     }
     function append(note as Lang.Dictionary, data as Lang.ByteArray) {
