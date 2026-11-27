@@ -68,7 +68,11 @@ class BackgroundUpload extends System.ServiceDelegate {
                 for (var scanned = 0; scanned < items.size(); scanned++) {
                     var i = (first + scanned) % items.size();
                     var note = items[i] as Lang.Dictionary;
-                    if (note["bytes"] <= 0 || "deleting".equals(note["state"])) {
+                    if (
+                        note["bytes"] <= 0 ||
+                        "deleting".equals(note["state"]) ||
+                        "draft".equals(note["state"])
+                    ) {
                         continue;
                     }
                     var progress = SyncTargets.progress(

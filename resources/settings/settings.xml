@@ -8,6 +8,10 @@
     <setting propertyKey="@Properties.autoUpload" title="@Strings.AutoLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.autoRecord" title="@Strings.AutoRecordLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.vibrateOnRecord" title="@Strings.VibrateLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.vibrateOnStop" title="@Strings.VibrateStopLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.soundOnStart" title="@Strings.SoundStartLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.soundOnStop" title="@Strings.SoundStopLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.autoSave" title="@Strings.AutoSaveLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.maxSeconds" title="@Strings.MaxLengthLabel">
         <settingConfig type="list">
             <listEntry value="10">@Strings.Len10s</listEntry>

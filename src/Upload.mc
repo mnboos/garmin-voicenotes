@@ -42,6 +42,7 @@ class Upload {
                 if (
                     note["bytes"] <= 0 ||
                     "deleting".equals(note["state"]) ||
+                    "draft".equals(note["state"]) ||
                     "recording".equals(note["state"])
                 ) {
                     continue;
@@ -61,7 +62,11 @@ class Upload {
     }
 
     function resync(note as Lang.Dictionary) {
-        if (note["bytes"] <= 0 || "deleting".equals(note["state"])) {
+        if (
+            note["bytes"] <= 0 ||
+            "deleting".equals(note["state"]) ||
+            "draft".equals(note["state"])
+        ) {
             message = "No audio to sync";
             return;
         }
@@ -86,7 +91,11 @@ class Upload {
     }
 
     function status(note as Lang.Dictionary) {
-        if (note["bytes"] <= 0 || "deleting".equals(note["state"])) {
+        if (
+            note["bytes"] <= 0 ||
+            "deleting".equals(note["state"]) ||
+            "draft".equals(note["state"])
+        ) {
             return "No audio";
         }
         var state = SyncTargets.read(note);

@@ -95,6 +95,7 @@ function phoneSkipsUnsendableNotes(logger) {
         Application.Storage.setValue("notes", [
             storeNote("deleting", 10, "deleting"),
             storeNote("recording", 10, "recording"),
+            storeNote("draft", 10, "draft"),
             { "id" => "empty", "state" => "interrupted", "bytes" => 0, "chunks" => 0 },
             storeNote("sent", 10, "saved"),
             storeNote("partial", 20, "interrupted")
@@ -108,6 +109,9 @@ function phoneSkipsUnsendableNotes(logger) {
         Test.assertEqual("missing", op(ask("read", { "id" => "deleting", "offset" => 0 })));
         Test.assertEqual("missing", op(ask("read", { "id" => "recording", "offset" => 0 })));
         Test.assertEqual("missing", op(ask("saved", { "id" => "deleting", "bytes" => 10 })));
+        Test.assertEqual("missing", op(ask("read", { "id" => "draft", "offset" => 0, "binary" => true })));
+        Test.assertEqual("missing", op(ask("saved", { "id" => "draft", "bytes" => 10 })));
+        Test.assert(Application.Storage.getValue("phone:draft") == null);
     } finally {
         Application.Storage.clearValues();
     }
@@ -183,6 +187,12 @@ function phoneResumesMidTransfer(logger) {
     Application.Storage.clearValues();
     try {
         Application.Storage.setValue("notes", [storeNote("resume", 3 * CHUNK_BYTES, "saved")]);
+        var binary = ask("read", { "id" => "resume", "offset" => CHUNK_BYTES, "binary" => true });
+        Test.assertEqual("block", op(binary));
+        var data = binary["data"] as Lang.ByteArray;
+        Test.assertEqual(CHUNK_BYTES, data.size());
+        Test.assertEqual(0, data[0]);
+        Test.assertEqual(255, data[CHUNK_BYTES - 1]);
         // Mid-block, near a chunk end, and inside a later chunk.
         Test.assertEqual(PhoneSync.BLOCK_BYTES, checkBlock(ask("read", { "id" => "resume", "offset" => 1000 }), 1000));
         Test.assertEqual(100, checkBlock(ask("read", { "id" => "resume", "offset" => 3996 }), 3996));

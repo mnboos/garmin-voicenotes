@@ -5,7 +5,7 @@ class DemoFixture {
     function save(store as Notes) as Lang.Dictionary {
         var format = {:containerFormat=>Audio.CONTAINER_WAV, :codec=>Audio.CODEC_LPCM,
             :frequency=>Audio.FREQ_8_KHZ, :channels=>Audio.CHANNEL_MONO};
-        var note = store.create(format, "wav") as Lang.Dictionary;
+        var note = store.create(format, "wav", "recording") as Lang.Dictionary;
         // Two seconds of 8 kHz, mono, signed 16-bit PCM with a standard RIFF header.
         var header = [82,73,70,70,36,125,0,0,87,65,86,69,102,109,116,32,16,0,0,0,
             1,0,1,0,64,31,0,0,128,62,0,0,2,0,16,0,100,97,116,97,0,125,0,0]b;

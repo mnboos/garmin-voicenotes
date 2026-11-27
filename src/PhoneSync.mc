@@ -7,6 +7,7 @@ import Toybox.StringUtil;
 (:background, :companion)
 module PhoneSync {
     const BLOCK_BYTES = 768;
+    const BINARY_BLOCK_BYTES = 4096;
 
     function reply(request as Lang.Dictionary) as Lang.Dictionary? {
         var rid = request["rid"];
@@ -21,7 +22,7 @@ module PhoneSync {
             } else if (op.equals("next")) {
                 response = offer();
             } else if (op.equals("read")) {
-                response = block(request["id"], request["offset"]);
+                response = block(request["id"], request["offset"], request["binary"] == true);
             } else if (op.equals("saved")) {
                 response = confirm(request["id"], request["bytes"]);
             }
@@ -44,6 +45,7 @@ module PhoneSync {
         return (
             !"deleting".equals(note["state"]) &&
             !"recording".equals(note["state"]) &&
+            !"draft".equals(note["state"]) &&
             note["bytes"] > 0
         );
     }
@@ -85,16 +87,26 @@ module PhoneSync {
         return { "op" => "missing", "id" => id };
     }
 
-    function block(id, offset) as Lang.Dictionary {
+    function block(id, offset, binary as Lang.Boolean) as Lang.Dictionary {
         var note = find(id);
         if (note == null || !(offset instanceof Lang.Number)) {
             return missing(id);
         }
-        var data = readBlock(note, offset);
+        var data = readBlock(note, offset, binary ? BINARY_BLOCK_BYTES : BLOCK_BYTES);
         if (data == null) {
             return missing(id);
         }
-        return { "op" => "block", "id" => id, "offset" => offset, "data" => data };
+        return {
+            "op" => "block",
+            "id" => id,
+            "offset" => offset,
+            "data" => binary
+                ? data
+                : StringUtil.convertEncodedString(data, {
+                      :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
+                      :toRepresentation => StringUtil.REPRESENTATION_STRING_BASE64
+                  })
+        };
     }
 
     function confirm(id, bytes) as Lang.Dictionary {
@@ -106,7 +118,11 @@ module PhoneSync {
         return { "op" => "confirmed", "id" => id };
     }
 
-    function readBlock(note as Lang.Dictionary, offset as Lang.Number) {
+    function readBlock(
+        note as Lang.Dictionary,
+        offset as Lang.Number,
+        limit as Lang.Number
+    ) as Lang.ByteArray? {
         if (offset < 0 || offset >= note["bytes"]) {
             return null;
         }
@@ -116,14 +132,11 @@ module PhoneSync {
                 return null;
             }
             if (offset < data.size()) {
-                var end = offset + BLOCK_BYTES;
+                var end = offset + limit;
                 if (end > data.size()) {
                     end = data.size();
                 }
-                return StringUtil.convertEncodedString(data.slice(offset, end), {
-                    :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
-                    :toRepresentation => StringUtil.REPRESENTATION_STRING_BASE64
-                });
+                return data.slice(offset, end);
             }
             offset -= data.size();
         }

@@ -1,22 +1,29 @@
 import Toybox.Application;
 import Toybox.Test;
+import Toybox.Lang;
 
 (:test)
 function partialCaptureStatus(logger) {
     var store = new Notes();
     var recorder = new Recorder(store);
-    recorder.note = {"state"=>"interrupted", "bytes"=>32};
+    var note = queuedNote(store);
+    note["state"] = "recording";
+    recorder.note = note;
     recorder.active = true;
-    recorder.message = "Storage full; partial note";
+    recorder.finishing = true;
+    recorder.partial = true;
+    recorder.closing = true;
     recorder.onComplete();
-    Test.assertEqual("Storage full; partial note", recorder.message);
+    Test.assertEqual("interrupted", note["state"]);
+    Test.assertEqual(4, note["bytes"]);
+    store.remove(note);
     return true;
 }
 
 (:test)
 function interruptedAppendRecovery(logger) {
     var store = new Notes();
-    var note = store.create({}, "ogg");
+    var note = store.create({}, "ogg", "recording");
     store.append(note, [1, 2]b);
     // Model a shutdown after the next window reaches storage, before catalog save.
     Application.Storage.setValue(note["id"] + ":1", [3]b);
@@ -34,7 +41,7 @@ function interruptedAppendRecovery(logger) {
 function interruptedDeletionRecovery(logger) {
     var store = new Notes();
     var count = store.items.size();
-    var note = store.create({}, "wav");
+    var note = store.create({}, "wav", "recording");
     store.append(note, [1]b);
     store.append(note, [2]b);
     note["state"] = "deleting";
@@ -47,18 +54,8 @@ function interruptedDeletionRecovery(logger) {
     return true;
 }
 
-// Stand in for the receiver at the request boundary, including its completion ACK.
-class TestForegroundUpload extends Upload {
-    var rejected;
-    function initialize(store, badId) { Upload.initialize(store); rejected = badId; }
-    function send() {
-        if (rejected.equals(current["id"])) { response(422, null); }
-        else { response(200, {"ok"=>true}); }
-    }
-}
-
 function queuedNote(store) {
-    var note = store.create({}, "ogg");
+    var note = store.create({}, "ogg", "recording");
     store.append(note, [79, 103, 103, 83]b);
     note["state"] = "saved";
     store.save();
@@ -73,69 +70,49 @@ function enableTestUpload() {
 }
 
 (:test)
-function foregroundSkipsRejectedNote(logger) {
+function receiverRetryKeepsOtherTargetProgress(logger) {
     enableTestUpload();
     var store = new Notes();
-    var bad = queuedNote(store);
-    var good = queuedNote(store);
-    var uploader = new TestForegroundUpload(store, bad["id"]);
-    uploader.tick();
-    uploader.tick();
-    Test.assert(good["uploaded"]);
-    Test.assert(!bad["uploaded"]);
-    store.remove(bad);
-    store.remove(good);
+    var note = queuedNote(store);
+    var primary = SyncTargets.get(0) as Lang.Array<Lang.String>;
+    var other = ["https://second.example", -1, false, 0];
+    Application.Storage.setValue(SyncTargets.key(note), {1 => other});
+    var transfer = new SyncTransfer(note, 0, primary, [primary[0], 0, false, 0], null, null);
+
+    Test.assert(transfer.acknowledge(422, null) != null);
+    Test.assertEqual(0, transfer.cursor);
+    Test.assert(transfer.acknowledge(200, {"ok" => true}) == null);
+    Test.assertEqual(1, transfer.cursor);
+    Test.assert(transfer.acknowledge(503, null) != null);
+    Test.assertEqual(1, transfer.cursor);
+    Test.assert(transfer.acknowledge(200, {"ok" => true}) == null);
+
+    var progress = SyncTargets.read(note);
+    Test.assertEqual(-1, progress[0][1]);
+    Test.assertEqual(other[0], progress[1][0]);
+    Test.assertEqual(-1, progress[1][1]);
+    store.remove(note);
     return true;
 }
 
-class TestBackgroundUpload extends BackgroundUpload {
-    var missingId;
-    function initialize(badId) { BackgroundUpload.initialize(); missingId = badId; }
-    function send() as Void {
-        if (missingId.equals(note["id"])) { BackgroundUpload.send(); }
-        else { response(200, {"ok"=>true}); }
-    }
-}
-
 (:test)
-function backgroundAdvancesAfterMissingChunk(logger) {
-    enableTestUpload();
+function recoveredDraftRequiresDecision(logger) {
     var store = new Notes();
-    var bad = queuedNote(store);
-    var good = queuedNote(store);
-    Application.Storage.deleteValue(bad["id"] + ":0");
-    new TestBackgroundUpload(bad["id"]).onTemporalEvent();
-    new TestBackgroundUpload(bad["id"]).onTemporalEvent();
-    store.refreshUploads();
-    Test.assert(good["uploaded"]);
-    Test.assert(!bad["uploaded"]);
-    store.remove(bad);
-    store.remove(good);
-    return true;
-}
+    var draft = store.create({}, "wav", "draft");
+    store.append(draft, [1, 2]b);
+    Application.Storage.setValue(draft["id"] + ":1", [3]b);
 
-class UnavailableBackgroundUpload extends BackgroundUpload {
-    function send() as Void { response(503, null); }
-}
-
-(:test)
-function backgroundRetriesFairlyAcrossWakes(logger) {
-    enableTestUpload();
-    var store = new Notes();
-    var bad = queuedNote(store);
-    var good = queuedNote(store);
-    new UnavailableBackgroundUpload().onTemporalEvent();
-    // Advance the persisted retry deadline to model the next scheduled wake.
-    Application.Storage.setValue("retry:" + bad["id"], 1);
-    new TestBackgroundUpload("none").onTemporalEvent();
-    store.refreshUploads();
-    Test.assert(good["uploaded"]);
-    Test.assert(!bad["uploaded"]);
-    new TestBackgroundUpload("none").onTemporalEvent();
-    store.refreshUploads();
-    Test.assert(bad["uploaded"]);
-    store.remove(bad);
-    store.remove(good);
+    var reopened = new Notes();
+    var recorder = new Recorder(reopened);
+    Test.assert(recorder.awaitingDecision);
+    var recovered = recorder.note;
+    Test.assertEqual("draft", recovered["state"]);
+    Test.assertEqual(2, recovered["bytes"]);
+    Test.assert(reopened.read(recovered, 1) == null);
+    recorder.resolveDraft(true);
+    Test.assert(!recorder.awaitingDecision);
+    Test.assertEqual("saved", recovered["state"]);
+    reopened.remove(recovered);
     return true;
 }
 

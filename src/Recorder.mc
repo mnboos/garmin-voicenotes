@@ -3,12 +3,19 @@ import Toybox.Attention;
 import Toybox.Audio;
 import Toybox.Lang;
 import Toybox.System;
+import Toybox.Timer;
 import Toybox.WatchUi;
 
 class Recorder {
-    var store;
+    const FEEDBACK_SETTLE_MS = 350;
+    var store as Notes;
     var note as Lang.Dictionary? = null;
     var active = false;
+    var startTimer as Timer.Timer? = null;
+    var awaitingDecision = false;
+    var closing = false;
+    var lastEndFeedback = null;
+    var partial = false;
     var finishing = false;
     var started = 0;
     var lastData = 0;
@@ -16,14 +23,42 @@ class Recorder {
     var limit = 0; // 0 = no limit
     var warnAt = -1; // -1 = none
     var warned = false;
-    function initialize(notes) {
+    function initialize(notes as Notes) {
         store = notes;
+        for (var i = 0; i < store.items.size(); i++) {
+            var draft = store.items[i];
+            if ("draft".equals(draft.get("state"))) {
+                note = draft;
+                awaitingDecision = true;
+                message = "Keep this recording?";
+                break;
+            }
+        }
     }
     function start() {
-        if (active || finishing) {
+        if (active || startTimer != null || awaitingDecision) {
             return;
         }
+        var delay = 0;
+        if (feedback("vibrateOnRecord", "soundOnStart", 1800)) {
+            delay = FEEDBACK_SETTLE_MS;
+        } else if (lastEndFeedback != null) {
+            delay = FEEDBACK_SETTLE_MS - (System.getTimer() - lastEndFeedback);
+        }
+        if (delay > 0) {
+            message = "Starting...";
+            startTimer = new Timer.Timer();
+            startTimer.start(method(:beginCapture), delay, false);
+            WatchUi.requestUpdate();
+            return;
+        }
+        beginCapture();
+    }
+    function beginCapture() as Void {
+        startTimer = null;
+        lastEndFeedback = null;
         note = null;
+        partial = false;
         try {
             var format = {
                 :containerFormat => Audio.CONTAINER_OGG,
@@ -43,6 +78,7 @@ class Recorder {
             }
             if (!Audio.Capture.isFormatSupported(format)) {
                 message = "Microphone unavailable";
+                WatchUi.requestUpdate();
                 return;
             }
             Audio.Capture.initializeAudioCapture(self, {
@@ -50,14 +86,15 @@ class Recorder {
                 :windowSize => 4096,
                 :windowFilledBehavior => Audio.Capture.WINDOW_FILLED_CONTINUE
             });
-            note = store.create(format, ext);
+            var state =
+                Application.Properties.getValue("autoSave") == false ? "draft" : "recording";
+            note = store.create(format, ext, state);
             readLimit();
             started = System.getTimer();
             lastData = started;
             active = true;
             message = "Recording";
             Audio.Capture.start();
-            vibrate();
         } catch (e) {
             active = false;
             finishing = false;
@@ -66,12 +103,25 @@ class Recorder {
         }
         WatchUi.requestUpdate();
     }
+    function shutdown() {
+        closing = true;
+        stop();
+    }
     function stop() {
+        if (startTimer != null) {
+            startTimer.stop();
+            startTimer = null;
+            message = "Ready to record";
+            WatchUi.requestUpdate();
+            return;
+        }
         if (!active || finishing) {
             return;
         }
         finishing = true;
-        message = "Saving...";
+        note["seconds"] = (System.getTimer() - started) / 1000;
+        message = "Stopping...";
+        WatchUi.requestUpdate();
         try {
             Audio.Capture.stop();
         } catch (e) {
@@ -80,6 +130,12 @@ class Recorder {
     }
     function tick() {
         if (!active) {
+            return;
+        }
+        if (finishing) {
+            if (System.getTimer() - lastData > 15000) {
+                onError(Audio.Capture.CAPTURE_ERR_INTERNAL);
+            }
             return;
         }
         note["seconds"] = (System.getTimer() - started) / 1000;
@@ -91,20 +147,16 @@ class Recorder {
                 new Attention.VibeProfile(100, 150)
             ]);
         }
-        if (limit > 0 && warned && !finishing) {
+        if (limit > 0 && warned) {
             message = "Ends in " + (limit - note["seconds"]) + " s";
         }
         if (limit > 0 && note["seconds"] >= limit) {
             stop();
-            message = "Time limit; saving...";
             return;
         }
         if (System.getTimer() - lastData > 15000) {
+            partial = true;
             stop();
-            if (active) {
-                onError(Audio.Capture.CAPTURE_ERR_INTERNAL);
-            }
-            message = "Capture stalled; check note";
         }
     }
     function onData(data as Lang.ByteArray) as Void {
@@ -115,9 +167,8 @@ class Recorder {
         try {
             store.append(note, data);
         } catch (e) {
-            note["state"] = "interrupted";
+            partial = true;
             stop();
-            message = "Storage full; partial note";
         }
         WatchUi.requestUpdate();
     }
@@ -125,26 +176,62 @@ class Recorder {
         if (!active) {
             return;
         }
-        active = false;
-        finishing = false;
-        if ("recording".equals(note["state"])) {
-            note["state"] = "saved";
-        }
-        note["seconds"] = (System.getTimer() - started) / 1000;
-        if (note["bytes"] == 0) {
-            note["state"] = "interrupted";
-            message = "No audio received";
-        } else if ("saved".equals(note["state"])) {
-            message = "Saved on watch";
-        }
-        persistStatus();
-        WatchUi.requestUpdate();
+        finishCapture();
     }
     function onError(error as Audio.Capture.Error) as Void {
+        if (active) {
+            partial = true;
+            finishCapture();
+            message = "Capture error " + error;
+            WatchUi.requestUpdate();
+        }
+    }
+    function finishCapture() {
+        if (!finishing) {
+            note["seconds"] = (System.getTimer() - started) / 1000;
+        }
         active = false;
         finishing = false;
-        markInterrupted();
-        message = "Capture error " + error;
+        message =
+            note["bytes"] == 0
+                ? "No audio received"
+                : partial
+                  ? "Partial note saved"
+                  : "Saved on watch";
+        if ("draft".equals(note["state"])) {
+            awaitingDecision = true;
+            message = "Keep this recording?";
+            if (note["bytes"] == 0) {
+                resolveDraft(false);
+            }
+        } else {
+            note["state"] = partial || note["bytes"] == 0 ? "interrupted" : "saved";
+        }
+        persistStatus();
+        if (!closing && feedback("vibrateOnStop", "soundOnStop", 1000)) {
+            lastEndFeedback = System.getTimer();
+        }
+        WatchUi.requestUpdate();
+    }
+    function resolveDraft(keep) {
+        if (!awaitingDecision) {
+            return;
+        }
+        try {
+            if (keep && note["bytes"] > 0) {
+                note["state"] = partial ? "interrupted" : "saved";
+                store.save();
+                message = partial ? "Partial note saved" : "Saved on watch";
+            } else {
+                store.remove(note);
+                message = note["bytes"] == 0 ? "No audio received" : "Deleted";
+            }
+            awaitingDecision = false;
+            note = null;
+        } catch (e) {
+            note["state"] = "draft";
+            message = keep ? "Save failed. Try again." : "Delete failed. Try again.";
+        }
         WatchUi.requestUpdate();
     }
     function readLimit() {
@@ -159,11 +246,23 @@ class Recorder {
             }
         }
     }
-    function vibrate() {
-        if (Application.Properties.getValue("vibrateOnRecord") != true) {
-            return;
+    function feedback(vibrationKey, soundKey, pitch) as Lang.Boolean {
+        var played = false;
+        if (Attention has :vibrate && Application.Properties.getValue(vibrationKey) == true) {
+            pulse([new Attention.VibeProfile(60, 200)]);
+            played = true;
         }
-        pulse([new Attention.VibeProfile(60, 200)]);
+        if (
+            Attention has :playTone &&
+            Attention has :ToneProfile &&
+            Application.Properties.getValue(soundKey) == true
+        ) {
+            try {
+                Attention.playTone({ :toneProfile => [new Attention.ToneProfile(pitch, 150)] });
+                played = true;
+            } catch (e) {}
+        }
+        return played;
     }
     function pulse(profile as Lang.Array<Attention.VibeProfile>) {
         if (Attention has :vibrate) {
@@ -180,7 +279,10 @@ class Recorder {
         }
     }
     function markInterrupted() {
-        if (note != null) {
+        if (note != null && "draft".equals(note["state"])) {
+            awaitingDecision = true;
+            resolveDraft(false);
+        } else if (note != null) {
             note["state"] = "interrupted";
             persistStatus();
         }
