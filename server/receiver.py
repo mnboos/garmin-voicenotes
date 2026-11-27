@@ -82,13 +82,6 @@ class Repository:
             or extension not in ("ogg", "wav")
         ):
             raise UploadError(400, "Invalid note metadata")
-        location = meta.get("location")
-        if location is not None and (
-            not isinstance(location, list) or len(location) != 2
-            or any(type(value) not in (int, float) or not -limit <= value <= limit
-                   for value, limit in zip(location, (90, 180)))
-        ):
-            raise UploadError(400, "Invalid note location")
         with self.lock:
             folder = self.root / note_id
             chunks = [folder / f"{index:04d}.chunk" for index in range(count)]
@@ -116,8 +109,6 @@ class Repository:
             else:
                 # Preserve exactly what the watch sent.
                 saved = {key: meta.get(key) for key in ("id", "created", "seconds", "state", "chunks", "bytes", "extension", "format")}
-                if location is not None:
-                    saved["location"] = location
                 saved["sha256"] = digest
                 metadata = json.dumps(saved, indent=2).encode()
                 previous_size = audio_path.stat().st_size if audio_path.exists() else 0

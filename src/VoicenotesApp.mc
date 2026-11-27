@@ -279,15 +279,6 @@ class VoicenotesApp extends Application.AppBase {
             return;
         }
         var menu = new WatchUi.Menu2({ :title => "Saved notes" });
-        menu.addItem(
-            new WatchUi.ToggleMenuItem(
-                "Save location",
-                null,
-                "location",
-                recorder.savesLocation(),
-                null
-            )
-        );
         if (self has :syncNow) {
             menu.addItem(new WatchUi.MenuItem("Sync now", null, "sync", null));
         }
@@ -578,17 +569,6 @@ class NotesDelegate extends WatchUi.Menu2InputDelegate {
     }
     function onSelect(item) {
         var id = item.getId();
-        if (id.equals("location") && item instanceof WatchUi.ToggleMenuItem) {
-            var enabled = app.recorder.savesLocation();
-            try {
-                app.recorder.setSaveLocation(!enabled);
-                item.setSubLabel(null);
-            } catch (e) {
-                item.setEnabled(enabled);
-                item.setSubLabel("Could not save setting");
-            }
-            return;
-        }
         if (id.equals("sync") && app has :syncNow) {
             app.syncNow();
             app.browsingNotes = false;

@@ -24,8 +24,6 @@ Back up the server’s `data` folder to keep a copy of your uploads.
 
 To send new recordings automatically, turn on **Automatically upload queued notes (also in background)** in Garmin Connect.
 
-If you want to include GPS coordinates, turn on **Save location** in **Saved notes** before recording. The upload includes coordinates if your watch gets a GPS fix during the recording.
-
 [Get notified about new uploads in Home Assistant](how-to/home-assistant-notifications.qmd)
 
 ## Copy recordings to a network share

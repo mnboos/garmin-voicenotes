@@ -2,17 +2,14 @@ import Toybox.Application;
 import Toybox.Attention;
 import Toybox.Audio;
 import Toybox.Lang;
-import Toybox.Position;
 import Toybox.System;
 import Toybox.WatchUi;
 
 class Recorder {
-    const SAVE_LOCATION = "saveLocation";
     var store;
     var note as Lang.Dictionary? = null;
     var active = false;
     var finishing = false;
-    private var locating = false;
     var started = 0;
     var lastData = 0;
     var message = "Ready to record";
@@ -21,12 +18,6 @@ class Recorder {
     var warned = false;
     function initialize(notes) {
         store = notes;
-    }
-    function savesLocation() as Lang.Boolean {
-        return Application.Storage.getValue(SAVE_LOCATION) == true;
-    }
-    function setSaveLocation(enabled as Lang.Boolean) as Void {
-        Application.Storage.setValue(SAVE_LOCATION, enabled);
     }
     function start() {
         if (active || finishing) {
@@ -73,56 +64,13 @@ class Recorder {
             message = "Cannot record / storage full";
             markInterrupted();
         }
-        if (active) {
-            startLocation();
-        }
         WatchUi.requestUpdate();
-    }
-    private function startLocation() as Void {
-        try {
-            if (savesLocation() && Position has :enableLocationEvents) {
-                locating = true;
-                Position.enableLocationEvents(Position.LOCATION_CONTINUOUS, method(:onPosition));
-            }
-        } catch (e) {
-            stopLocation();
-        }
-    }
-    private function stopLocation() as Void {
-        if (!locating) {
-            return;
-        }
-        locating = false;
-        try {
-            Position.enableLocationEvents(Position.LOCATION_DISABLE, null);
-        } catch (e) {
-            /* Location failure should not interrupt audio capture. */
-        }
-    }
-    function onPosition(info as Position.Info) as Void {
-        if (
-            !locating ||
-            !active ||
-            finishing ||
-            note == null ||
-            info.accuracy < Position.QUALITY_USABLE
-        ) {
-            return;
-        }
-        var fix = info.position;
-        var when = info.when;
-        if (fix == null || when == null || when.value() < note["created"]) {
-            return;
-        }
-        note["location"] = fix.toDegrees();
-        stopLocation();
     }
     function stop() {
         if (!active || finishing) {
             return;
         }
         finishing = true;
-        stopLocation();
         message = "Saving...";
         try {
             Audio.Capture.stop();
@@ -179,7 +127,6 @@ class Recorder {
         }
         active = false;
         finishing = false;
-        stopLocation();
         if ("recording".equals(note["state"])) {
             note["state"] = "saved";
         }
@@ -196,7 +143,6 @@ class Recorder {
     function onError(error as Audio.Capture.Error) as Void {
         active = false;
         finishing = false;
-        stopLocation();
         markInterrupted();
         message = "Capture error " + error;
         WatchUi.requestUpdate();

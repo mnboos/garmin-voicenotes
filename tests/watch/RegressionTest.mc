@@ -2,23 +2,6 @@ import Toybox.Application;
 import Toybox.Test;
 
 (:test)
-function recordingLocationPreferencePersists(logger) {
-    Application.Storage.deleteValue("saveLocation");
-    var store = new Notes();
-    var recorder = new Recorder(store);
-    try {
-        Test.assert(!recorder.savesLocation());
-        recorder.setSaveLocation(true);
-        Test.assert(new Recorder(store).savesLocation());
-        recorder.setSaveLocation(false);
-        Test.assert(!new Recorder(store).savesLocation());
-    } finally {
-        Application.Storage.deleteValue("saveLocation");
-    }
-    return true;
-}
-
-(:test)
 function partialCaptureStatus(logger) {
     var store = new Notes();
     var recorder = new Recorder(store);
