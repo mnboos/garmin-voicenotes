@@ -1,5 +1,7 @@
 ---
 title: "Verification"
+aliases:
+  - /validation.html
 ---
 
 ## 23 November 2026
@@ -14,4 +16,4 @@ title: "Verification"
 - On a watch, record, stop, play, and delete using buttons and touch. Check saved notes after restart, partial notes after interruption or full storage, and speaker and headphone playback.
 - Test automatic upload after reconnecting with the app open and closed. Interrupt an upload, retry, and compare the receiver checksum.
 - Disable automatic upload and verify manual upload still works.
-- For phone sync, complete the [Android beta hardware checks](android-beta.qmd#physical-device-acceptance).
+- For phone sync, complete the [Android beta hardware checks](android-development.qmd#physical-device-acceptance).

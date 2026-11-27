@@ -1,17 +1,15 @@
 # Voicenotes
 
-Record and play voice notes on a Garmin watch. Export them to an HTTPS receiver or try the [Android companion beta](docs/android-beta.qmd).
+Record and play voice notes on a Garmin watch. Keep them on the watch, upload them to your own server, or sync them to Android from a fēnix 8.
 
-Run `just garmin-build-app` to build `bin/Voicenotes.prg` for the Venu 4 45 mm. See the [setup guide](docs/setup.qmd) for other devices and receiver setup.
+- [User guide](docs/index.qmd) for installing Voicenotes, recording on your watch, and exporting notes.
+- [Developer docs](docs/developer/index.qmd) for building the apps and running tests.
 
-- Press START or tap the centre to record. START or BACK stops and saves.
-- Press MENU or DOWN, or tap the bottom of the screen, to open **Saved notes**. Select a note, then tap or press START to play. Swipe left to open the delete confirmation, or press MENU or DOWN for note actions.
-- Open **Saved notes → Settings** for auto-record, vibration, and recording length. Turn on **Save location** in **Saved notes** to include a usable GPS fix in HTTPS exports.
-- Configure the HTTPS receiver in Garmin Connect. Manual and automatic uploads keep the original on the watch.
+## Build and preview
 
-## Documentation
+Run `just garmin-build-app` to build for the fēnix 8 47 mm. See [Build the watch app](docs/developer/setup.qmd) for other models.
 
-See the [documentation index](docs/index.qmd) and [verification results](docs/validation.qmd). Run `quarto preview docs` to preview the site or `quarto render docs` to build `docs/_site`.
+Run `just docs-preview` to preview the documentation or `quarto render docs` to build `docs/_site`.
 
 To serve the site at `http://localhost:8080` with Docker, run:
 

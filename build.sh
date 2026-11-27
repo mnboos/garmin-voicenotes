@@ -11,7 +11,7 @@ RUN=""
 PRINT_SDK=""
 SIMULATOR=""
 COMPANION=""
-DEVICE=venu445mm
+DEVICE=fenix847mm
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --device) [ "$#" -ge 2 ] || fail '--device needs a product ID.'; DEVICE=$2; shift ;;

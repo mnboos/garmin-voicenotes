@@ -1,5 +1,7 @@
 ---
-title: "How Voicenotes connects to Home Assistant"
+title: Home Assistant internals
+aliases:
+  - /explanation/home-assistant-integration.html
 ---
 
 The receiver assembles the watch’s audio chunks, saves the recording, then renames `metadata.json.tmp` to `metadata.json`. Home Assistant’s Folder Watcher uses that move to trigger the notification after the audio is ready. [Set up a notification](../how-to/home-assistant-notifications.qmd)

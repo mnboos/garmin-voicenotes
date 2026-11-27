@@ -1,5 +1,7 @@
 ---
-title: "Build and run Voicenotes"
+title: Watch build
+aliases:
+  - /setup.html
 ---
 
 ## Build the watch app
@@ -8,13 +10,13 @@ Install Java, `just`, and Connect IQ SDK 9.3.0 or newer for your OS. Update devi
 
 | Task | Command |
 | --- | --- |
-| Build for Venu 4 45 mm | `just garmin-build-app` |
+| Build for fēnix 8 47 mm | `just garmin-build-app` |
 | Build for another device | `just garmin-build-app "" fr970` |
 | Run in the simulator | Run `just garmin-simulator`, then `just garmin-run` |
 | Build the store package | `just garmin-package` produces `bin/Voicenotes.iq` |
 | Check installed profiles on Windows | `just garmin-check` |
 
-Copy the matching `bin/Voicenotes.prg` to `GARMIN/APPS` over USB. Each device build replaces that file.
+Each device build replaces `bin/Voicenotes.prg`. [Install the build on your watch](#install-a-development-build).
 
 The scripts look for the SDK in `CONNECTIQ_SDK`, Garmin’s selected SDK, then `.tools/sdk`. Back up `private/developer_key.der` for future updates. The first build reuses `.tools/developer.der` if present. Set `DEVELOPER_KEY` to use another key.
 
@@ -40,15 +42,23 @@ PowerShell also accepts `-SdkPath` and `-DeveloperKey`. The aliases `-Sdk`, `-Ke
 
 The sideload build contains your token. Keep it and `private/settings.json` private. Store packaging rejects private settings.
 
+## Install a development build {#install-a-development-build}
+
+1. Connect your watch to your computer by USB.
+2. Copy the `bin/Voicenotes.prg` built for your [watch model](../compatibility.qmd) into the watch’s `GARMIN/APPS` folder.
+3. Disconnect the watch and open **Voicenotes** from its app list.
+
 ## Run the export receiver
 
-1. Set `VOICENOTES_TOKEN` to a random ASCII token of at least 32 characters. Reuse it across restarts.
-2. With Python 3.11 or newer, run `python server/receiver.py --data data`.
-3. Put a reverse proxy with a trusted HTTPS certificate in front of `127.0.0.1:8787`. Use a hostname reachable from the phone or watch.
-4. In Garmin Connect’s Voicenotes settings, enter the HTTPS base URL and token. Enable automatic upload if desired.
-5. Record and upload a note. Check `data/NOTE_ID/` for the original `note.ogg` or `note.wav` and `metadata.json`. Back up the data directory.
+See [Set up the receiver](../upload.qmd#set-up-the-receiver).
 
-[Set up Home Assistant notifications](how-to/home-assistant-notifications.qmd) · [Upload behavior and limits](compatibility.qmd#https-uploads)
+## Recording and upload details
+
+- The app tries mono Ogg/Opus at 16 kHz, then mono WAV/LPCM at 8 kHz. Audio is stored in 4 KB chunks.
+- The optional end warning vibrates up to 10 seconds before the recording limit. HTTPS exports put any saved GPS fix in the `location` field in `metadata.json` as `[latitude, longitude]`.
+- Retryable failures defer the note for five minutes. Permanently rejected notes are skipped by automatic upload.
+- After the app closes, Garmin schedules background jobs at a requested five-minute interval. Jobs checkpoint acknowledged chunks and stop starting requests after 20 seconds.
+- The receiver accepts one token, up to 40 MB and 10,000 chunks per note, and about 1 GB of stored data. It validates the container header and chunk set and keeps the original audio bytes.
 
 ## Verify changes
 

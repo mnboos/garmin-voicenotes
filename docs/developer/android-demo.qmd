@@ -1,5 +1,7 @@
 ---
-title: "Send your first simulated voice note"
+title: Simulator demo
+aliases:
+  - /android-demo.html
 ---
 
 Follow the [simulator requirements](simulator-test-reference.qmd#environment) and stop the Voicenotes receiver.

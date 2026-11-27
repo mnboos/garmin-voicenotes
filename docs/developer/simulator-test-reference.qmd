@@ -1,11 +1,13 @@
 ---
 title: "Simulator test reference"
+aliases:
+  - /simulator-test-reference.html
 ---
 
 ## Environment
 
 - macOS desktop session and Python 3.10 or newer.
-- Connect IQ SDK 9.3.0 or newer with the Venu 4 45 mm profile (`venu445mm`).
+- Connect IQ SDK 9.3.0 or newer with the fēnix 8 47 mm profile (`fenix847mm`).
 - Private companion source at `~/src/garmin-voicenotes-companion`, or set `VOICENOTES_COMPANION_DIR`.
 - JDK 11 or newer, Android build-tools 36.0.0, platform `android-37.0`, and ADB. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` if needed.
 - Default AVD `Medium_Phone_API_37.0`. Keep port 8787 free during tests.

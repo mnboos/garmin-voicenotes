@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the Venu 4 simulator and Garmin's tethered SDK on an Android AVD."""
+"""Exercise the fēnix 8 simulator and Garmin's tethered SDK on an Android AVD."""
 import argparse
 import contextlib
 import hashlib
@@ -162,7 +162,7 @@ class Suite:
         app.set("id", "289786c524644eb48eb8f0554da01d7e")
         products = app.find("{*}products")
         for product in list(products):
-            if product.get("id") != "venu445mm":
+            if product.get("id") != "fenix847mm":
                 products.remove(product)
         manifest.write(self.output / "manifest.xml", encoding="utf-8")
         resources = self.output / "resources"
@@ -177,7 +177,7 @@ class Suite:
             "project.manifest = manifest.xml\n"
             f"base.sourcePath = {ROOT / 'src'};{ROOT / 'simulator'};{Path(__file__).resolve().parent};RunId.mc\n"
             "base.resourcePath = resources\n"
-            f"venu445mm.resourcePath = $(base.resourcePath);{ROOT / 'launcher-icons/65'};{ROOT / 'resources-venu445mm'}\n"
+            f"fenix847mm.resourcePath = $(base.resourcePath);{ROOT / 'launcher-icons/65'};{ROOT / 'resources-fenix8'}\n"
         )
         key = self.output.parent / "test-key.der"
         if not key.exists():
@@ -189,12 +189,12 @@ class Suite:
         self.artifact = self.output / "VNE2E.prg"
         result = run(self.sdk / "bin/monkeyc",
                      "-f", jungle,
-                     "-o", self.artifact, "-y", key, "-w", "-r", "-d", "venu445mm")
+                     "-o", self.artifact, "-y", key, "-w", "-r", "-d", "fenix847mm")
         (self.output / "build.log").write_bytes(result.stdout + result.stderr)
 
     def launch_watch(self):
         with self.watch_log.open("ab") as log:
-            launch = subprocess.Popen([self.sdk / "bin/monkeydo", self.artifact, "venu445mm"],
+            launch = subprocess.Popen([self.sdk / "bin/monkeydo", self.artifact, "fenix847mm"],
                                       cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
                                       start_new_session=True)
         self.launches.append(launch)

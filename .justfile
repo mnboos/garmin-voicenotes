@@ -7,13 +7,13 @@ default:
 [doc("Build bin/Voicenotes.prg for a device, optionally with private settings.")]
 [group('garmin')]
 [windows]
-garmin-build-app settings="" device="venu445mm":
+garmin-build-app settings="" device="fenix847mm":
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 {{ if settings == "" { "" } else { "-SettingsFile " + quote(settings) } }} -Device {{ quote(device) }}
 
 [doc("Build bin/Voicenotes.prg for a device, optionally with private settings.")]
 [group('garmin')]
 [unix]
-garmin-build-app settings="" device="venu445mm":
+garmin-build-app settings="" device="fenix847mm":
     bash build.sh --device {{ quote(device) }} {{ quote(settings) }}
 
 [doc("Build bin/Voicenotes.iq for the store, without private settings.")]
@@ -35,13 +35,13 @@ garmin-release: garmin-package
 [doc("Build and run Voicenotes. Start the simulator first.")]
 [group('garmin')]
 [windows]
-garmin-run settings="" device="venu445mm":
+garmin-run settings="" device="fenix847mm":
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File build.ps1 {{ if settings == "" { "" } else { "-SettingsFile " + quote(settings) } }} -Device {{ quote(device) }} -Run
 
 [doc("Build and run Voicenotes. Start the simulator first.")]
 [group('garmin')]
 [unix]
-garmin-run settings="" device="venu445mm":
+garmin-run settings="" device="fenix847mm":
     bash build.sh --device {{ quote(device) }} --run {{ quote(settings) }}
 
 [doc("Start the selected Connect IQ SDK's simulator.")]
@@ -73,7 +73,7 @@ garmin-run-fixture:
 [group('garmin')]
 [private]
 [unix]
-garmin-build-companion settings="" device="venu445mm":
+garmin-build-companion settings="" device="fenix847mm":
     bash build.sh --companion --device {{ quote(device) }} {{ quote(settings) }}
 
 [doc("Build the Android debug inbox APK.")]
@@ -104,7 +104,7 @@ android-preview mode="beta" serial="":
 test-android-storage:
     just --justfile "${VOICENOTES_COMPANION_DIR:-$HOME/src/garmin-voicenotes-companion}/.justfile" test-android-storage
 
-[doc("Run the server-off Venu 4 to Android emulator acceptance suite on macOS.")]
+[doc("Run the server-off fēnix 8 to Android emulator acceptance suite on macOS.")]
 [group('test')]
 [private]
 [macos]
@@ -124,6 +124,11 @@ test-simulator-background serial="":
 [macos]
 android-emulator avd="Medium_Phone_API_37.0":
     "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}/emulator/emulator" -avd {{ quote(avd) }}
+
+[doc("Render the docs and preview them in the browser with live reload.")]
+[group('docs')]
+docs-preview:
+    quarto preview docs
 
 [doc("Format the Monkey C source with Prettier. Run `npm install` once first.")]
 [group('lint')]

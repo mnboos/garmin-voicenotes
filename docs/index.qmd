@@ -1,28 +1,31 @@
 ---
-title: Voicenotes documentation
+title: First steps
 toc: false
 ---
 
-Record and play voice notes on a Garmin watch, then export them to an HTTPS receiver or an Android phone.
+Record a voice note on your Garmin watch and listen to it right on your wrist. You can also copy notes off the watch.
 
-## Tutorials
+[Compatibility](compatibility.qmd) · [Install](install.qmd)
 
-- [Send your first simulated voice note](android-demo.qmd)
+## Record {#record-a-note}
 
-## How-to guides
+1. Open **Voicenotes** on your watch.
+2. Press **START** or tap the microphone to record.
+3. Press **START** or **BACK**, or tap the stop icon, to save.
 
-- [Build the watch app and run the export receiver](setup.qmd)
-- [Install and use the Android beta](android-beta.qmd)
-- [Get notified in Home Assistant when a voice note is saved](how-to/home-assistant-notifications.qmd)
-- [Run the Garmin-to-Android simulator tests](run-simulator-tests.qmd)
+Recordings stop after one minute by default. In **Saved notes → Settings**, you can change **Max length**, turn on **Auto-record**, or adjust vibration.
 
-## Reference
+## Play or delete {#listen-to-or-delete-a-note}
 
-- [Compatibility and limits](compatibility.qmd)
-- [Simulator test reference](simulator-test-reference.qmd)
-- [Verification results](validation.qmd)
+1. From the main screen, tap the list icon at the bottom or press **MENU** or **DOWN** to open **Saved notes**.
+2. Select a recording.
+3. Tap the screen or press **START** to play.
 
-## Explanation
+To remove a recording, open it, swipe left or choose **MENU → Delete**, then select **Delete permanently**.
 
-- [How Voicenotes connects to Home Assistant](explanation/home-assistant-integration.qmd)
-- [What the simulator confirms about sync](simulator-sync-behavior.qmd)
+## Export {#copy-a-note-off-your-watch}
+
+- [Sync to an Android phone](android-sync.qmd) from a fēnix 8.
+- [Upload to your own server](upload.qmd) using HTTPS.
+
+Both options keep the original on your watch.

@@ -1,8 +1,8 @@
 ---
-title: "Get notified in Home Assistant when a voice note is saved"
+title: Home Assistant notifications
 ---
 
-[Set up the receiver](../setup.qmd#run-the-export-receiver) and upload a test note. Home Assistant needs read access to the data directory and must receive file move events. Use the path Home Assistant sees, including inside its container.
+[Set up the receiver](../upload.qmd#set-up-the-receiver) and upload a test note. Home Assistant needs read access to the data directory and must receive file move events. Use the path Home Assistant sees, including inside its container.
 
 ## Add Folder Watcher
 
@@ -50,4 +50,4 @@ title: "Get notified in Home Assistant when a voice note is saved"
 - **File exists, event entity stays unchanged.** Check the path, permissions, and pattern. Some network mounts do not relay file moves.
 - **Entity updates, notification missing.** Check the automation’s **Traces** for the trigger and condition. [Automation testing guide](https://www.home-assistant.io/docs/automation/testing/)
 
-[How the receiver signals a completed upload](../explanation/home-assistant-integration.qmd)
+[How the receiver signals a completed upload](../developer/home-assistant-integration.qmd)

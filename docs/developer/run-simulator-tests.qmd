@@ -1,5 +1,7 @@
 ---
-title: "Run the Garmin-to-Android simulator tests"
+title: Simulator tests
+aliases:
+  - /run-simulator-tests.html
 ---
 
 Follow the [simulator requirements](simulator-test-reference.qmd#environment).
@@ -21,7 +23,7 @@ With the simulator running and a developer key configured, run:
 
 ```sh
 bash tests/watch/build.sh
-"$(bash build.sh --sdk)/bin/monkeydo" bin/watch-tests/Regression.prg venu445mm -t
+"$(bash build.sh --sdk)/bin/monkeydo" bin/watch-tests/Regression.prg fenix847mm -t
 ```
 
 These tests use isolated watch storage and simulated receiver responses. Read the printed pass/fail summary. Some SDK versions return exit code 1 on success.

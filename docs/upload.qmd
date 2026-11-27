@@ -1,0 +1,27 @@
+---
+title: Server upload
+toc: false
+---
+
+Send your recordings to a server you run. Voicenotes keeps a copy on your watch.
+
+## Set up the receiver
+
+1. Set `VOICENOTES_TOKEN` to a random ASCII token of at least 32 characters. Keep the same token across restarts.
+2. From the repository folder, run `python server/receiver.py --data data` with Python 3.11 or newer.
+3. Put a reverse proxy with a trusted HTTPS certificate in front of `127.0.0.1:8787`. Use an address your watch or paired phone can reach.
+4. In Garmin Connect, open the Voicenotes app settings. Enter the base address in **Server URL (HTTPS)** and the token in **Server access token**.
+
+## Upload a note
+
+1. Open a recording in **Saved notes**.
+2. Press **MENU** or **DOWN**, then choose **Upload**.
+3. Look for **Uploaded** in **Saved notes**. On your server, each recording has its own folder under `data` with the audio file and `metadata.json`.
+
+Back up the server’s `data` folder to keep a copy of your uploads.
+
+To send new recordings automatically, turn on **Automatically upload queued notes (also in background)** in Garmin Connect.
+
+If you want to include GPS coordinates, turn on **Save location** in **Saved notes** before recording. The upload includes coordinates if your watch gets a GPS fix during the recording.
+
+[Get notified about new uploads in Home Assistant](how-to/home-assistant-notifications.qmd)

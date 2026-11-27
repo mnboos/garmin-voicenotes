@@ -1,0 +1,32 @@
+---
+title: Companion
+toc: false
+aliases:
+  - /android-beta.html
+---
+
+Voicenotes Companion copies recordings from a paired fēnix 8 to a phone running Android 11 or later.
+
+## Set up Companion
+
+1. Install [Voicenotes Companion from Google Play](https://play.google.com/store/apps/details?id=ch.voicenotes).
+2. Install a [sync-enabled build of Voicenotes on your watch](developer/setup.qmd#install-a-development-build).
+3. Pair the watch in Garmin Connect if you haven’t already.
+
+## Sync a recording
+
+1. Open Voicenotes on your watch and phone.
+2. Select your fēnix 8 in the phone’s inbox if Garmin Connect lists several watches.
+3. Tap **Sync now** on your phone or choose **Saved notes → Sync now** on the watch.
+
+**On phone** confirms that the phone saved a copy. You can play or share the recording from the inbox.
+
+You can sync recordings up to 80,000 bytes (about 80 KB). For larger recordings, listen on the watch or [upload to your own server](upload.qmd).
+
+## If a transfer pauses
+
+Open Voicenotes on both devices and tap **Sync now** again. To let an active transfer continue for up to three minutes while the phone is locked, turn on **Allow sync to finish while locked** and grant the requested permissions.
+
+Share any recordings you want to keep before clearing app storage or uninstalling. The watch remembers which notes it already sent.
+
+[Privacy policy](privacy.qmd)

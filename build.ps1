@@ -3,7 +3,7 @@ param(
     [Alias('Sdk')][string]$SdkPath = $env:CONNECTIQ_SDK,
     [Alias('Key')][string]$DeveloperKey = $env:DEVELOPER_KEY,
     [string]$SettingsFile,
-    [string]$Device = 'venu445mm',
+    [string]$Device = 'fenix847mm',
     [Alias('Export')][switch]$Package,
     [switch]$Run,
     [switch]$PrintSdk

@@ -10,8 +10,8 @@ cat > "$out/tests.jungle" <<JUNGLE
 project.manifest = manifest.xml
 base.sourcePath = $PWD/src;$PWD/tests/watch
 base.resourcePath = $PWD/resources
-venu445mm.resourcePath = \$(base.resourcePath);$PWD/launcher-icons/65;$PWD/resources-venu445mm
+fenix847mm.resourcePath = \$(base.resourcePath);$PWD/launcher-icons/65;$PWD/resources-fenix8
 base.excludeAnnotations = companion;simulatorFixture;simulatorTest
 JUNGLE
 "$sdk/bin/monkeyc" -f "$out/tests.jungle" \
-    -t -d venu445mm -y "${DEVELOPER_KEY:-private/developer_key.der}" -o "$out/Regression.prg"
+    -t -d fenix847mm -y "${DEVELOPER_KEY:-private/developer_key.der}" -o "$out/Regression.prg"
