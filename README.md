@@ -4,6 +4,7 @@ Record and play voice notes on a Garmin watch. Keep them on the watch, upload th
 
 - [User guide](docs/index.qmd) for installing Voicenotes, recording on your watch, and exporting notes.
 - [Developer docs](docs/developer/index.qmd) for building the apps and running tests.
+- [Published documentation](https://mnboos.github.io/garmin-voicenotes/).
 
 ## Build and preview
 
@@ -19,6 +20,14 @@ docker run --rm -p 127.0.0.1:8080:8080 voicenotes-docs
 ```
 
 The Docker build uses Linux amd64 for Quarto and a native runtime image.
+
+## Publish the docs
+
+The Docs workflow builds the site on pull requests and pushes to `main`. Publishing a stable GitHub Release deploys the docs from its tag.
+
+To replace the live site manually, open **Actions → Docs → Run workflow**, select the ref to publish, and run the workflow.
+
+For initial setup, select **GitHub Actions** under **Settings → Pages → Build and deployment → Source**. Under **Settings → Environments → github-pages**, allow branches and tags under **Deployment branches and tags** so release tags and manually selected refs can deploy.
 
 ## License
 

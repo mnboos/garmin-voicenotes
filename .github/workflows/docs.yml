@@ -1,0 +1,68 @@
+name: Docs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build docs
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: "1.10.20"
+      - name: Configure GitHub Pages
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Render and verify docs
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          if [[ -n "$SITE_URL" ]]; then
+            quarto render docs --site-url "$SITE_URL/"
+          else
+            quarto render docs
+          fi
+          test -s docs/_site/index.html
+          test -s docs/_site/developer/index.html
+          test -s docs/_site/search.json
+      - name: Upload Pages artifact
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/_site
+
+  deploy:
+    name: Publish docs
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
