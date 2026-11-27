@@ -127,10 +127,12 @@ class PhoneSync {
             "op" => "block",
             "id" => id,
             "offset" => offset,
-            "data" => binary ? data : StringUtil.convertEncodedString(data, {
-                :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
-                :toRepresentation => StringUtil.REPRESENTATION_STRING_BASE64
-            })
+            "data" => binary
+                ? data
+                : StringUtil.convertEncodedString(data, {
+                      :fromRepresentation => StringUtil.REPRESENTATION_BYTE_ARRAY,
+                      :toRepresentation => StringUtil.REPRESENTATION_STRING_BASE64
+                  })
         };
     }
 
@@ -147,7 +149,11 @@ class PhoneSync {
         return { "op" => "confirmed", "id" => id };
     }
 
-    function bytesAt(note as Lang.Dictionary, offset as Lang.Number, limit as Lang.Number) as Lang.ByteArray? {
+    function bytesAt(
+        note as Lang.Dictionary,
+        offset as Lang.Number,
+        limit as Lang.Number
+    ) as Lang.ByteArray? {
         if (!note["id"].equals(cursorId) || offset < cursorStart) {
             cursorId = note["id"];
             cursorChunk = 0;
