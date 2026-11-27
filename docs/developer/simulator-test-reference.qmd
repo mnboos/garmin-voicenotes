@@ -28,7 +28,7 @@ The suite uses a fresh `VNE2E` watch app and `bin/android/Voicenotes-test.apk` (
 
 | Check | Expected result |
 | --- | --- |
-| Foreground | Watch receipt, matching WAV hash, and automatic playback. |
+| Foreground | Watch receipt and matching WAV hash. |
 | Reconnect | The restarted inbox resumes at the saved offset and produces one WAV per note ID. |
 | Watch app closed | The runner checks for delivery within 25 seconds of an Android sync request and verifies delivery after reopening. |
 

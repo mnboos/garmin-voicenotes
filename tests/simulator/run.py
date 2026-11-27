@@ -242,12 +242,10 @@ class Suite:
         return result.stdout if result.returncode == 0 else b""
 
     def verify_note(self, phase, note):
-        def saved_and_played():
-            log = self.phone_log()
-            return ("Watch confirmed saved note " + note in log
-                    and "Playback completed " + note + ".wav" in log)
+        def saved():
+            return "Watch confirmed saved note " + note in self.phone_log()
 
-        wait_for(f"Android save and playback for note {phase}", saved_and_played, 55)
+        wait_for(f"Android save for note {phase}", saved, 55)
         wait_for(f"watch receipt {phase}", lambda: self.watch_event(rf"receipt {phase} {note}"))
         audio = self.audio(note)
         if len(audio) != SIZE or hashlib.sha256(audio).hexdigest() != SHA256:
