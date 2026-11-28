@@ -76,7 +76,9 @@ class VoicenotesApp extends Application.AppBase {
     }
     (:companion)
     function stopPhoneSync() as Void {
-        Background.registerForPhoneAppMessageEvent();
+        if (Application.Properties.getValue("backgroundPhoneSync") == true) {
+            Background.registerForPhoneAppMessageEvent();
+        }
     }
     (:companion)
     function onPhoneMessage(message as Communications.PhoneAppMessage) as Void {
@@ -87,7 +89,7 @@ class VoicenotesApp extends Application.AppBase {
         try {
             var response = PhoneSync.reply(request);
             if (response != null) {
-                Communications.transmit(response, null, new PhoneReply(false));
+                Communications.transmit(response, null, new PhoneReply(null));
                 var status = PhoneStatus.text(response, notes.items);
                 if (status != null) {
                     showPhoneStatus(status);
@@ -100,7 +102,7 @@ class VoicenotesApp extends Application.AppBase {
     (:companion)
     function syncNow() {
         try {
-            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneReply(false));
+            Communications.transmit({ "v" => 1, "op" => "sync" }, null, new PhoneReply(null));
             phoneMessage = "Open Android inbox";
         } catch (e) {
             phoneMessage = "Phone unavailable";
@@ -156,7 +158,7 @@ class VoicenotesApp extends Application.AppBase {
         if (self has :stopSimulatorTest) {
             stopSimulatorTest();
         }
-        if (upload.needsBackground()) {
+        if (SyncTargets.hasPending(notes.items)) {
             Background.registerForTemporalEvent(new Time.Duration(300));
         }
     }

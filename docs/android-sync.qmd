@@ -21,6 +21,13 @@ Voicenotes Companion copies recordings from a paired fēnix 8 to a phone running
 
 **On phone** confirms that the phone saved a copy. You can play or share the recording from the inbox.
 
+## Sync with the watch app closed
+
+1. In Garmin Connect, open the Voicenotes watch app settings.
+2. Turn on **Sync to phone when the watch app is closed**. It is off by default.
+3. Open and close Voicenotes on the watch once to apply the setting.
+4. Open the Android inbox and tap **Sync now**.
+
 ## If a transfer pauses
 
 Open Voicenotes on both devices and tap **Sync now** again. To let an active transfer continue for up to three minutes while the phone is locked, turn on **Allow sync to finish while locked** and grant the requested permissions.

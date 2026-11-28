@@ -7,6 +7,8 @@ import Toybox.System;
 (:background)
 class BackgroundUpload extends System.ServiceDelegate {
     var transfer = null;
+    var uploading = false;
+    var phoneReplies = 0;
     var items as Lang.Array<Lang.Dictionary>?;
     var deadline;
     var nextSlot;
@@ -18,30 +20,58 @@ class BackgroundUpload extends System.ServiceDelegate {
 
     (:companion)
     function onPhoneAppMessage(message as Communications.PhoneAppMessage) as Void {
+        if (Application.Properties.getValue("backgroundPhoneSync") != true) {
+            Background.deletePhoneAppMessageEvent();
+            exitIfIdle();
+            return;
+        }
         var request = message.data;
         if (request instanceof Lang.Dictionary) {
-            try {
-                var response = PhoneSync.reply(request);
-                if (response != null) {
-                    System.println("Phone sync background " + response["op"]);
-                    Communications.transmit(response, null, new PhoneReply(true));
-                    return;
+            var response = PhoneSync.reply(request);
+            if (response != null) {
+                phoneReplies++;
+                try {
+                    Communications.transmit(
+                        response, null, new PhoneReply(method(:phoneReplyFinished))
+                    );
+                } catch (e) {
+                    phoneReplyFinished();
                 }
-            } catch (e) {}
+                return;
+            }
         }
-        Background.exit(null);
+        exitIfIdle();
     }
+
+    (:companion)
+    function phoneReplyFinished() as Void {
+        phoneReplies--;
+        exitIfIdle();
+    }
+
+    function exitIfIdle() as Void {
+        if (!uploading && phoneReplies == 0) {
+            Background.exit(null);
+        }
+    }
+
     function onTemporalEvent() as Void {
-        if (!System.getDeviceSettings().connectionAvailable) {
-            Background.exit(null);
-            return;
-        }
         SyncTargets.bindLegacy();
-        items = Application.Storage.getValue("notes") as Lang.Array<Lang.Dictionary>?;
-        if (items == null) {
-            Background.exit(null);
+        var stored = Application.Storage.getValue("notes");
+        if (
+            !(stored instanceof Lang.Array) ||
+            !SyncTargets.hasPending(stored as Lang.Array<Lang.Dictionary>)
+        ) {
+            Background.deleteTemporalEvent();
+            exitIfIdle();
             return;
         }
+        if (!System.getDeviceSettings().connectionAvailable) {
+            exitIfIdle();
+            return;
+        }
+        items = stored as Lang.Array<Lang.Dictionary>;
+        uploading = true;
         nextSlot = Application.Storage.getValue("sync:nextSlot");
         if (nextSlot == null) {
             nextSlot = 0;
@@ -103,7 +133,11 @@ class BackgroundUpload extends System.ServiceDelegate {
                 }
             }
         }
-        Background.exit(null);
+        if (!SyncTargets.hasPending(items)) {
+            Background.deleteTemporalEvent();
+        }
+        uploading = false;
+        exitIfIdle();
     }
 
     function finished(error) {

@@ -123,26 +123,6 @@ class Upload {
         return "Synced " + synced + "/" + total;
     }
 
-    function needsBackground() {
-        if (Application.Properties.getValue("autoUpload")) {
-            return true;
-        }
-        for (var slot = 0; slot < SyncTargets.COUNT; slot++) {
-            var target = SyncTargets.get(slot);
-            if (target == null) {
-                continue;
-            }
-            for (var i = 0; i < store.items.size(); i++) {
-                var note = store.items[i] as Lang.Dictionary;
-                var progress = SyncTargets.progress(note, SyncTargets.read(note), slot, target[0]);
-                if (progress[2]) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     function finished(error) {
         if (error == null) {
             message = "Synced to target " + (transfer.slot + 1);

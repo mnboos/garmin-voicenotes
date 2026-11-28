@@ -22,7 +22,7 @@ Add up to two more receiver URLs and tokens in Garmin Connect to sync to multipl
 
 Back up the server’s `data` folder to keep a copy of your uploads.
 
-To send new recordings automatically, turn on **Automatically upload queued notes (also in background)** in Garmin Connect.
+To send new recordings automatically, turn on **Automatically upload queued notes (also in background)** in Garmin Connect. The watch schedules background retries while uploads are pending and stops scheduling them when the queue is empty.
 
 [Get notified about new uploads in Home Assistant](how-to/home-assistant-notifications.qmd)
 

@@ -14,6 +14,7 @@ class SimulatorTest {
             if (savedId instanceof Lang.String) { id = savedId; }
         } else {
             while (store.items.size() > 0) { store.remove(store.items[0]); }
+            Application.Properties.setValue("backgroundPhoneSync", true);
             Application.Storage.setValue("testRun", TEST_RUN);
             queue(store);
         }

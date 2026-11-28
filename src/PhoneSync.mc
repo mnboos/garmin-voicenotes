@@ -1,5 +1,4 @@
 import Toybox.Application;
-import Toybox.Background;
 import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.StringUtil;
@@ -175,14 +174,14 @@ module PhoneStatus {
 
 (:background, :companion)
 class PhoneReply extends Communications.ConnectionListener {
-    var service as Lang.Boolean;
-    function initialize(background as Lang.Boolean) {
+    var finished as Lang.Method?;
+    function initialize(callback as Lang.Method?) {
         ConnectionListener.initialize();
-        service = background;
+        finished = callback;
     }
     function onComplete() as Void {
-        if (service) {
-            Background.exit(null);
+        if (finished != null) {
+            finished.invoke();
         }
     }
     function onError() as Void {

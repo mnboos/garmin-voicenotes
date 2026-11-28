@@ -6,6 +6,7 @@
     <property id="serverUrl3" type="string"></property>
     <property id="serverToken3" type="string"></property>
     <property id="autoUpload" type="boolean">false</property>
+    <property id="backgroundPhoneSync" type="boolean">false</property>
     <property id="autoRecord" type="boolean">false</property>
     <property id="vibrateOnRecord" type="boolean">false</property>
     <property id="vibrateOnStop" type="boolean">false</property>
