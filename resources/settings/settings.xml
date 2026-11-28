@@ -25,4 +25,5 @@
         </settingConfig>
     </setting>
     <setting propertyKey="@Properties.warnBeforeEnd" title="@Strings.WarnLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.phoneSync" title="@Strings.PhoneSyncLabel"><settingConfig type="boolean"/></setting>
 </settings>

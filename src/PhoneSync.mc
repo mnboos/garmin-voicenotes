@@ -9,7 +9,15 @@ module PhoneSync {
     const BLOCK_BYTES = 768;
     const BINARY_BLOCK_BYTES = 4096;
 
+    // Sync to the Android companion can be turned off in the settings.
+    function enabled() as Lang.Boolean {
+        return Application.Properties.getValue("phoneSync") != false;
+    }
+
     function reply(request as Lang.Dictionary) as Lang.Dictionary? {
+        if (!enabled()) {
+            return null;
+        }
         var rid = request["rid"];
         var op = request["op"];
         if (request["v"] != 1 || !(rid instanceof Lang.String) || !(op instanceof Lang.String)) {

@@ -1,3 +1,9 @@
+# Unreleased
+
+**Sync**
+
+- Turn off sync to the Android companion with **Phone sync** in the watch settings or in Garmin Connect
+
 # 26.11.3
 
 **Sync**

@@ -20,6 +20,7 @@ class VoicenotesApp extends Application.AppBase {
     var timer;
     var player = null;
     var phoneMessage = "";
+    var phoneSyncActive = false;
     (:simulatorTest)
     var simulatorTest as SimulatorTest? = null;
     var autoStartPending = false;
@@ -49,6 +50,10 @@ class VoicenotesApp extends Application.AppBase {
     }
     (:companion)
     function startPhoneSync() as Void {
+        phoneSyncActive = PhoneSync.enabled();
+        if (!phoneSyncActive) {
+            return;
+        }
         Communications.registerForPhoneAppMessages(method(:onPhoneMessage));
         // Wake the companion before its next poll.
         phoneMessage = "Phone: waiting";
@@ -76,7 +81,20 @@ class VoicenotesApp extends Application.AppBase {
     }
     (:companion)
     function stopPhoneSync() as Void {
-        Background.registerForPhoneAppMessageEvent();
+        if (PhoneSync.enabled()) {
+            Background.registerForPhoneAppMessageEvent();
+        }
+    }
+    // Applies a change to the companion sync setting while the app is open.
+    (:companion)
+    function phoneSyncChanged() as Void {
+        if (PhoneSync.enabled()) {
+            startPhoneSync();
+        } else {
+            Communications.registerForPhoneAppMessages(null);
+            phoneMessage = "";
+            phoneSyncActive = false;
+        }
     }
     (:companion)
     function onPhoneMessage(message as Communications.PhoneAppMessage) as Void {
@@ -158,6 +176,13 @@ class VoicenotesApp extends Application.AppBase {
         }
         if (upload.needsBackground()) {
             Background.registerForTemporalEvent(new Time.Duration(300));
+        }
+    }
+    (:companion)
+    function onSettingsChanged() as Void {
+        if (phoneSyncActive != PhoneSync.enabled()) {
+            phoneSyncChanged();
+            WatchUi.requestUpdate();
         }
     }
     function getServiceDelegate() {
@@ -243,6 +268,17 @@ class VoicenotesApp extends Application.AppBase {
                 null
             )
         );
+        if (self has :phoneSyncChanged) {
+            menu.addItem(
+                new WatchUi.ToggleMenuItem(
+                    "Phone sync",
+                    "Send notes to Android",
+                    "phoneSync",
+                    phoneSyncActive,
+                    null
+                )
+            );
+        }
         WatchUi.pushView(menu, new SettingsDelegate(self), WatchUi.SLIDE_UP);
     }
     function addSettingToggle(menu, label, key, enabledByDefault) {
@@ -301,7 +337,7 @@ class VoicenotesApp extends Application.AppBase {
             return;
         }
         var menu = new WatchUi.Menu2({ :title => "Saved notes" });
-        if (self has :syncNow) {
+        if (self has :syncNow && phoneSyncActive) {
             menu.addItem(new WatchUi.MenuItem("Sync now", null, "sync", null));
         }
         if (self has :saveDemoNote) {
@@ -623,6 +659,9 @@ class SettingsDelegate extends WatchUi.Menu2InputDelegate {
         }
         if (item instanceof WatchUi.ToggleMenuItem) {
             Application.Properties.setValue(item.getId() as Lang.String, item.isEnabled());
+            if (item.getId().equals("phoneSync") && app has :phoneSyncChanged) {
+                app.phoneSyncChanged();
+            }
         }
     }
 }
