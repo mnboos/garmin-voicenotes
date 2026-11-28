@@ -6,6 +6,7 @@
     <setting propertyKey="@Properties.serverUrl3" title="@Strings.Server3Label"><settingConfig type="alphaNumeric"/></setting>
     <setting propertyKey="@Properties.serverToken3" title="@Strings.Token3Label"><settingConfig type="alphaNumeric"/></setting>
     <setting propertyKey="@Properties.autoUpload" title="@Strings.AutoLabel"><settingConfig type="boolean"/></setting>
+    <setting propertyKey="@Properties.backgroundPhoneSync" title="@Strings.BackgroundPhoneSyncLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.autoRecord" title="@Strings.AutoRecordLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.vibrateOnRecord" title="@Strings.VibrateLabel"><settingConfig type="boolean"/></setting>
     <setting propertyKey="@Properties.vibrateOnStop" title="@Strings.VibrateStopLabel"><settingConfig type="boolean"/></setting>

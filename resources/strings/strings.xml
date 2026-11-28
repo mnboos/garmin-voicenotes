@@ -7,6 +7,7 @@
     <string id="Server3Label">Target 3 HTTPS URL (optional)</string>
     <string id="Token3Label">Target 3 access token</string>
     <string id="AutoLabel">Automatically upload queued notes (also in background)</string>
+    <string id="BackgroundPhoneSyncLabel">Sync to phone when the watch app is closed</string>
     <string id="AutoRecordLabel">Start recording when the app opens</string>
     <string id="VibrateLabel">Vibrate when recording starts</string>
     <string id="VibrateStopLabel">Vibrate when recording ends</string>

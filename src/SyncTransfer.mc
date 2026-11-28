@@ -48,6 +48,31 @@ module SyncTargets {
         return state == null ? {} : state as Lang.Dictionary;
     }
 
+    function hasPending(items as Lang.Array<Lang.Dictionary>) as Lang.Boolean {
+        var auto = Application.Properties.getValue("autoUpload") == true;
+        for (var slot = 0; slot < COUNT; slot++) {
+            var target = get(slot);
+            if (target == null) {
+                continue;
+            }
+            for (var i = 0; i < items.size(); i++) {
+                var note = items[i];
+                if (
+                    note["bytes"] <= 0 ||
+                    "deleting".equals(note["state"]) ||
+                    "draft".equals(note["state"])
+                ) {
+                    continue;
+                }
+                var entry = progress(note, read(note), slot, target[0]);
+                if (entry[1] != -1 && (auto || entry[2])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     // Store the URL, next chunk (-1 means complete), manual queue flag, and resync revision.
     function progress(
         note as Lang.Dictionary,
